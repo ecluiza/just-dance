@@ -1,0 +1,1533 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rebola Ai</title>
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕺</text></svg>" />
+<style>
+  :root {
+    --fundo: #0d0b1a; --cartao: #17142b; --cartao-2: #221d3d; --borda: #342d5c;
+    --texto: #f4f1ff; --texto-2: #a9a2cc;
+    --rosa: #ff3ea5; --ciano: #2de2e6; --amarelo: #ffd319; --verde: #3cff8f; --vermelho: #ff3e6c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--texto); line-height: 1.45;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(255, 62, 165, .18), transparent 60%), var(--fundo);
+  }
+  h2 { margin: 0; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .85em; background: var(--cartao-2); padding: 2px 6px; border-radius: 6px; color: var(--amarelo); }
+  .nota { color: var(--texto-2); font-size: .9rem; margin: 0; }
+  .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .escondido { display: none !important; }
+  .so-cel { display: none; }
+  @media (max-width: 600px) { .so-pc { display: none; } .so-cel { display: inline; } }
+
+  /* topo */
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+  .logo { font-weight: 900; font-size: 1.3rem; }
+  .logo span { color: var(--rosa); }
+  .abas button { background: none; border: 0; color: var(--texto-2); font: inherit; font-weight: 700; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+  .abas button.ativa { background: var(--ciano); color: var(--fundo); }
+  .direita { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+  #progresso { color: var(--texto-2); font-size: .9rem; }
+
+  /* layout */
+  main { display: grid; grid-template-columns: 1fr 380px; gap: 18px; padding: 18px; max-width: 1600px; margin: 0 auto; align-items: start; }
+  main.modo-aula { grid-template-columns: 1fr 520px; }
+  main.tela-cheia { grid-template-columns: 1fr; }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .botao { background: var(--rosa); color: #fff; border: 0; border-radius: 999px; padding: 10px 20px; font: inherit; font-weight: 800; cursor: pointer; }
+  .botao:disabled { opacity: .5; cursor: not-allowed; }
+  .botao.secundario { background: var(--cartao-2); border: 1px solid var(--borda); }
+  .botao.grande { font-size: 1.15rem; padding: 14px 28px; }
+  .botao.pequeno { padding: 6px 12px; font-size: .88rem; }
+  .link { background: none; border: 0; color: var(--texto-2); font: inherit; font-size: .85rem; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  /* palco: vídeo + desenho */
+  #palco { --proporcao: 1.3333; position: relative; margin: 0 auto; width: min(100%, calc((100vh - 110px) * var(--proporcao))); aspect-ratio: var(--proporcao); border-radius: 14px; overflow: hidden; background: #000; border: 1px solid var(--borda); }
+  #video, #canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #video { transform: scaleX(-1); object-fit: cover; } /* espelho só na tela; as contas usam a imagem original */
+  .aviso-palco { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; background: rgba(13, 11, 26, .88); font-size: 1.1rem; }
+  .aviso-palco.erro { color: var(--vermelho); }
+  .cadeado { font-size: 3rem; }
+  #comemoracao { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(13, 11, 26, .9); border: 2px solid var(--verde); border-radius: 16px; padding: 16px 24px; text-align: center; font-weight: 800; font-size: 1.3rem; opacity: 0; pointer-events: none; }
+  #comemoracao.anima { animation: comemora 2.6s ease-out forwards; }
+  @keyframes comemora { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6) } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) } 20% { transform: translate(-50%, -50%) scale(1) } 80% { opacity: 1 } 100% { opacity: 0 } }
+
+  /* HUD do jogo */
+  #hud-jogo { position: absolute; top: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; font-weight: 900; text-shadow: 0 2px 12px rgba(0, 0, 0, .8); }
+  #pontos { font-size: clamp(1.6rem, 4vw, 3rem); }
+  #combo { font-size: clamp(1rem, 2.4vw, 1.8rem); color: var(--amarelo); }
+  #feedback { position: absolute; top: 22%; left: 0; right: 0; text-align: center; pointer-events: none; opacity: 0;
+    font-size: clamp(2.2rem, 8vw, 5.5rem); font-weight: 900; font-style: italic; text-shadow: 0 0 30px currentColor, 0 4px 0 rgba(0, 0, 0, .5); }
+  #feedback small { display: block; font-size: .4em; font-style: normal; color: #fff; }
+  #feedback.anima { animation: estouro .9s ease-out forwards; }
+  @keyframes estouro { 0% { transform: scale(.4); opacity: 0 } 15% { transform: scale(1.15); opacity: 1 } 30% { transform: scale(1) } 100% { transform: translateY(-30px); opacity: 0 } }
+  .perfeito { color: var(--verde); } .otimo { color: var(--ciano); } .bom { color: var(--amarelo); } .errou { color: var(--vermelho); }
+  #contagem { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-size: clamp(3rem, 14vw, 9rem); font-weight: 900; color: var(--amarelo); }
+  #fila { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 88px; background: rgba(0, 0, 0, .5); border-radius: 14px; overflow: hidden; }
+  #fila .alvo { position: absolute; left: 4px; top: 6px; bottom: 6px; width: 72px; border: 3px solid var(--rosa); border-radius: 12px; box-shadow: 0 0 18px var(--rosa); }
+  #fila canvas { position: absolute; top: 12px; }
+  #aviso-sumiu { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); background: rgba(255, 62, 108, .9); padding: 8px 16px; border-radius: 999px; font-weight: 800; }
+  #btn-sair { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); opacity: .7; }
+  canvas.mini { background: var(--cartao-2); border-radius: 10px; flex-shrink: 0; }
+
+  /* HUD da aula */
+  #hud-aula { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+  #hud-aula span { background: rgba(0, 0, 0, .6); padding: 4px 12px; border-radius: 999px; font-weight: 800; font-size: clamp(.95rem, 2.2vw, 1.5rem); width: fit-content; }
+  #hud-aula span:empty { display: none; }
+  #hud-titulo { color: var(--ciano); }
+
+  /* painel do jogo */
+  .opcao { display: flex; gap: 12px; align-items: center; text-align: left; background: var(--cartao-2); border: 2px solid transparent; border-radius: 12px; padding: 6px 10px; color: var(--texto); font: inherit; cursor: pointer; }
+  .opcao small { display: block; color: var(--texto-2); }
+  .opcao.ativa { border-color: var(--rosa); }
+  .placar-final { font-size: 2.6rem; font-weight: 900; color: var(--amarelo); }
+  .classes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .classes div { background: var(--cartao-2); border-radius: 10px; padding: 8px; text-align: center; }
+  .classes b { display: block; font-size: 1.6rem; }
+  .classes span { font-size: .8rem; color: var(--texto-2); }
+
+  /* painel da aula: missões = experimentos */
+  details.missao { background: var(--cartao-2); border: 1px solid var(--borda); border-radius: 12px; padding: 10px 14px; }
+  details.missao.ok { border-color: rgba(60, 255, 143, .6); }
+  details.missao[open] { border-color: var(--ciano); }
+  details.missao > summary { cursor: pointer; font-weight: 800; font-size: 1.05rem; }
+  details.missao p { margin: 8px 0; font-size: .92rem; }
+  .desafio { background: rgba(255, 211, 25, .08); border: 1px solid rgba(255, 211, 25, .35); border-radius: 10px; padding: 8px 12px; font-size: .92rem; margin: 8px 0; }
+  .controles { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+  .controles .linha button.ativa { background: var(--ciano); color: var(--fundo); border-color: var(--ciano); }
+  .status { font-size: .92rem; display: flex; flex-direction: column; gap: 6px; }
+  .status ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+  .status .ok { color: var(--verde); } .status .agora { color: var(--amarelo); } .status .falta { color: var(--texto-2); }
+  .status .erro { color: var(--vermelho); }
+  .amostra { display: inline-block; width: 28px; height: 28px; border-radius: 6px; border: 2px solid #fff; vertical-align: middle; margin-right: 8px; }
+  .rgb { display: grid; grid-template-columns: 22px 1fr 40px; gap: 4px 8px; align-items: center; font-weight: 800; }
+  .rgb .trilho-h, .confianca .trilho-h { height: 10px; background: #0a0816; border-radius: 999px; overflow: hidden; }
+  .trilho-h div { height: 100%; }
+  .confianca { display: grid; grid-template-columns: 165px 1fr 44px; gap: 4px 8px; align-items: center; }
+  .barra-segurar { height: 8px; background: #0a0816; border-radius: 999px; overflow: hidden; margin-top: 8px; }
+  .barra-segurar div { height: 100%; width: 0; background: linear-gradient(90deg, var(--rosa), var(--amarelo)); transition: width .1s linear; }
+  details.codigo { margin-top: 10px; }
+  details.codigo summary { cursor: pointer; color: var(--texto-2); font-size: .88rem; }
+  details.codigo pre { background: #0a0816; border: 1px solid var(--borda); border-radius: 10px; padding: 10px 12px; overflow-x: auto; margin: 6px 0 0; }
+  details.codigo code { background: none; padding: 0; color: #e8e4ff; font-size: 12.5px; line-height: 1.5; }
+  .slider { display: flex; flex-direction: column; gap: 2px; }
+  .slider b { color: var(--ciano); }
+  .slider input { accent-color: var(--rosa); }
+  #palco.tocavel { cursor: crosshair; }
+
+  /* QR code */
+  #modal-qr { position: fixed; inset: 0; background: rgba(0, 0, 0, .8); display: grid; place-items: center; z-index: 10; }
+  #modal-qr .cartao { align-items: center; text-align: center; max-width: 92vw; }
+  #modal-qr img { width: min(70vmin, 420px); height: auto; background: #fff; border-radius: 12px; padding: 12px; }
+  #modal-qr code { font-size: 1.1rem; word-break: break-all; }
+
+  @media (min-width: 1001px) { #palco-wrap { position: sticky; top: 12px; } } /* o vídeo fica na tela enquanto rola as missões */
+  .lista { display: flex; flex-direction: column; gap: 8px; }
+  .icone-musica { width: 44px; height: 44px; display: grid; place-items: center; font-size: 1.4rem; background: var(--cartao-2); border-radius: 10px; flex-shrink: 0; }
+  #painel-jogo h2 { font-size: 1.1rem; margin-top: 4px; }
+  #input-bpm { background: #0a0816; color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; padding: 4px 6px; font: inherit; }
+  /* câmera: trocar de câmera e zoom (0,5× quando o aparelho deixa) */
+  #btn-camera { position: absolute; top: 10px; right: 10px; z-index: 3; opacity: .85; }
+  #painel-camera { position: absolute; top: 52px; right: 10px; z-index: 3; width: min(320px, calc(100% - 20px)); gap: 8px; padding: 12px; font-size: .9rem; }
+  #painel-camera select { width: 100%; background: #0a0816; color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; padding: 6px; font: inherit; }
+
+  /* nome e ranking */
+  .campo-nome { display: flex; flex-direction: column; gap: 4px; font-weight: 700; }
+  .campo-nome input { background: #0a0816; color: var(--texto); border: 2px solid var(--borda); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 1.1rem; }
+  .campo-nome input:focus { outline: none; border-color: var(--ciano); }
+  .campo-nome.faltando input { border-color: var(--vermelho); animation: treme .4s; }
+  @keyframes treme { 25% { transform: translateX(-6px) } 75% { transform: translateX(6px) } }
+  .resultado-ranking { background: var(--cartao-2); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .resultado-ranking .posicao { font-size: 2rem; font-weight: 900; color: var(--ciano); }
+  .resultado-ranking ol { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .resultado-ranking li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 8px; }
+  .resultado-ranking li.eu { background: rgba(45, 226, 230, .15); color: var(--ciano); font-weight: 800; }
+
+  /* celular: o vídeo fica grudado no topo, menor, e as missões rolam embaixo dele */
+  @media (max-width: 1000px) {
+    main, main.modo-aula { grid-template-columns: 1fr; padding: 0 10px 10px; gap: 10px; }
+    #palco-wrap { position: sticky; top: 0; z-index: 5; background: var(--fundo); margin: 0 -10px; padding: 8px 10px; box-shadow: 0 10px 18px rgba(0, 0, 0, .45); }
+    #palco { width: min(100%, calc(46vh * var(--proporcao))); width: min(100%, calc(46svh * var(--proporcao))); }
+    main.tela-cheia #palco-wrap { position: static; box-shadow: none; }
+    main.tela-cheia #palco { width: min(100%, calc((100vh - 70px) * var(--proporcao))); width: min(100%, calc((100svh - 70px) * var(--proporcao))); }
+    header { padding: 8px 10px; gap: 8px; }
+    .logo { font-size: 1.05rem; }
+    .abas button { padding: 5px 12px; }
+    #progresso { display: none; }
+    .cartao { padding: 12px; }
+    #fila { height: 62px; }
+    #fila .alvo { width: 52px; }
+    #fila canvas { width: 46px !important; height: 46px !important; top: 8px; }
+    #hud-aula span { font-size: .9rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" id="logo">Rebola <span>Ai</span></div>
+  <nav class="abas">
+    <button data-modo="aula">Aula</button>
+    <button data-modo="jogo">Jogar</button>
+  </nav>
+  <div class="direita">
+    <span id="progresso"></span>
+    <a id="link-ranking" class="botao pequeno secundario escondido" href="/ranking" target="_blank" style="text-decoration: none">🏆 Ranking</a>
+    <button id="btn-qr" class="botao pequeno secundario">📱 <span class="so-pc">Link para a sala</span><span class="so-cel">Link</span></button>
+  </div>
+</header>
+
+<main id="main">
+  <!-- PALCO: vídeo da câmera com os desenhos por cima -->
+  <div id="palco-wrap">
+  <div id="palco">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <div id="hud-jogo" class="escondido"><div id="pontos">0</div><div id="combo"></div></div>
+    <div id="feedback"></div>
+    <div id="contagem" class="escondido"></div>
+    <div id="fila" class="escondido"><div class="alvo"></div></div>
+    <div id="aviso-sumiu" class="escondido">Cadê você? Fique de frente para a câmera</div>
+    <button id="btn-sair" class="botao pequeno escondido">Sair (Esc)</button>
+
+    <div id="hud-aula" class="escondido"><span id="hud-titulo"></span><span id="hud-valor"></span></div>
+
+    <div id="aviso-palco" class="aviso-palco escondido"></div>
+    <div id="comemoracao"></div>
+
+    <button id="btn-camera" class="botao pequeno secundario" title="Trocar de câmera / zoom">📷</button>
+    <div id="painel-camera" class="cartao escondido">
+      <label>Câmera <select id="sel-camera"></select></label>
+      <label id="bloco-zoom" class="slider escondido">
+        <span>Zoom <b id="txt-zoom">1×</b></span>
+        <input id="zoom" type="range" />
+        <small class="nota">Para caber o corpo todo, use o menor zoom (0,5× se o aparelho tiver).</small>
+      </label>
+      <small class="nota" id="dica-camera"></small>
+    </div>
+  </div>
+  </div>
+
+  <!-- PAINEL DA AULA: cada missão é um experimento com a câmera -->
+  <aside id="painel-aula" class="cartao">
+    <div class="linha" style="justify-content: space-between">
+      <h2>Missões</h2>
+      <button id="btn-recomecar" class="link">recomeçar do zero</button>
+    </div>
+    <p class="nota" id="boas-vindas"></p>
+    <div id="lista-missoes" style="display: flex; flex-direction: column; gap: 10px"></div>
+  </aside>
+
+  <!-- PAINEL DO JOGO -->
+  <aside id="painel-jogo" class="cartao escondido"></aside>
+</main>
+
+<div id="modal-qr" class="escondido">
+  <div class="cartao">
+    <h2>Entre pelo celular</h2>
+    <img id="img-qr" alt="QR code do link" />
+    <code id="txt-link"></code>
+    <button class="botao" id="fechar-qr">Fechar</button>
+  </div>
+</div>
+
+<script>window.JDP = {"site":{"titulo":"Rebola Ai","boasVindas":"Cada missão é um experimento com a câmera. Cumpra o desafio e descubra como o computador enxerga.","liberarTudo":true,"jogoLiberado":true},"aula":{"tolerancia":45,"suavizacao":0.5},"tecnico":{"visibilidadeMin":0.5,"antecedenciaMs":3000,"modelo":"lite","mediapipeVersao":"1.2.2"},"pontuacao":{"classes":[{"rotulo":"Perfeito","minimo":0.85,"pontos":100,"css":"perfeito"},{"rotulo":"Ótimo","minimo":0.7,"pontos":70,"css":"otimo"},{"rotulo":"Bom","minimo":0.5,"pontos":40,"css":"bom"},{"rotulo":"Errou","minimo":0,"pontos":0,"css":"errou"}],"combo":{"passo":5,"incremento":0.5,"maximo":3}},"poses":[{"id":1,"rotulo":"Braços em T","assinatura":{"bracoE":0,"antebracoE":0,"bracoD":180,"antebracoD":180}},{"id":2,"rotulo":"Braços em Y","assinatura":{"bracoE":-55,"antebracoE":-55,"bracoD":-125,"antebracoD":-125}},{"id":3,"rotulo":"Tudo pra cima","assinatura":{"bracoE":-80,"antebracoE":-88,"bracoD":-100,"antebracoD":-92}},{"id":4,"rotulo":"Mãos na cintura","assinatura":{"bracoE":60,"antebracoE":150,"bracoD":120,"antebracoD":30}},{"id":5,"rotulo":"Disco!","assinatura":{"bracoE":-45,"antebracoE":-45,"bracoD":135,"antebracoD":135}},{"id":6,"rotulo":"Disco ao contrário","assinatura":{"bracoE":45,"antebracoE":45,"bracoD":-135,"antebracoD":-135}},{"id":7,"rotulo":"Muque","assinatura":{"bracoE":0,"antebracoE":-90,"bracoD":180,"antebracoD":-90}},{"id":8,"rotulo":"L","assinatura":{"bracoE":-90,"antebracoE":-90,"bracoD":180,"antebracoD":180}},{"id":9,"rotulo":"L ao contrário","assinatura":{"bracoE":0,"antebracoE":0,"bracoD":-90,"antebracoD":-90}},{"id":10,"rotulo":"Descansar","assinatura":{"bracoE":80,"antebracoE":85,"bracoD":100,"antebracoD":95}}],"musicas":[],"dancas":[{"id":1,"nome":"Aquecimento (fácil)","bpm":110,"introBatidas":8,"musicaSugerida":null,"passos":[{"poseId":1,"batidas":4},{"poseId":3,"batidas":4},{"poseId":4,"batidas":4},{"poseId":1,"batidas":4},{"poseId":2,"batidas":4},{"poseId":10,"batidas":4},{"poseId":7,"batidas":4},{"poseId":2,"batidas":4},{"poseId":4,"batidas":4},{"poseId":3,"batidas":4}]},{"id":2,"nome":"Febre do Disco (médio)","bpm":120,"introBatidas":8,"musicaSugerida":null,"passos":[{"poseId":5,"batidas":2},{"poseId":6,"batidas":2},{"poseId":5,"batidas":2},{"poseId":6,"batidas":2},{"poseId":1,"batidas":2},{"poseId":7,"batidas":2},{"poseId":1,"batidas":2},{"poseId":7,"batidas":2},{"poseId":8,"batidas":2},{"poseId":9,"batidas":2},{"poseId":8,"batidas":2},{"poseId":9,"batidas":2},{"poseId":2,"batidas":2},{"poseId":4,"batidas":2},{"poseId":2,"batidas":2},{"poseId":3,"batidas":2}]},{"id":3,"nome":"Turbo (difícil)","bpm":128,"introBatidas":8,"musicaSugerida":null,"passos":[{"poseId":2,"batidas":2},{"poseId":7,"batidas":2},{"poseId":5,"batidas":2},{"poseId":9,"batidas":2},{"poseId":4,"batidas":2},{"poseId":1,"batidas":2},{"poseId":6,"batidas":2},{"poseId":8,"batidas":2},{"poseId":3,"batidas":2},{"poseId":7,"batidas":2},{"poseId":5,"batidas":2},{"poseId":6,"batidas":2},{"poseId":2,"batidas":2},{"poseId":4,"batidas":2},{"poseId":8,"batidas":2},{"poseId":9,"batidas":2},{"poseId":1,"batidas":2},{"poseId":3,"batidas":2},{"poseId":7,"batidas":2},{"poseId":10,"batidas":2}]}],"dificuldades":[{"id":1,"nome":"Fácil","tolerancia":60,"janelaMs":500},{"id":2,"nome":"Médio","tolerancia":45,"janelaMs":400},{"id":3,"nome":"Difícil","tolerancia":30,"janelaMs":300}],"missoes":[{"id":10,"tipo":"pixels","titulo":"Uma imagem é feita de números","conceito":"Para o computador, uma imagem é uma tabela (matriz) de pixels. Cada pixel tem 3 números de 0 a 255: vermelho, verde e azul (RGB).","desafio":"Mexa na resolução para ver os pixels. Depois toque em algo bem vermelho (roupa, estojo, boca) até achar um pixel com muito vermelho e pouco verde e azul.","destrava":"você achou o vermelho nos números!","ajustes":{"canal":"r","minimo":170,"max_outros":110},"codigo":"\/\/ Cada pixel tem 3 números: vermelho, verde e azul (0 a 255)\nconst imagem = ctx.getImageData(0, 0, largura, altura);\nconst i = (y * largura + x) * 4;\nconst r = imagem.data[i];\nconst g = imagem.data[i + 1];\nconst b = imagem.data[i + 2];"},{"id":11,"tipo":"cores","titulo":"Cores e contraste","conceito":"Dá para separar a imagem em canais (só vermelho, só verde, só azul) ou transformar em tons de cinza. Com um limiar, cada pixel vira preto ou branco: é o processamento mais simples que existe.","desafio":"Experimente cada filtro por alguns segundos. No \u0022limiar\u0022, mexa no slider até sua silhueta ficar separada do fundo.","destrava":"você viu a imagem com outros olhos!","ajustes":{"modos":["cinza","vermelho","verde","azul","limiar"],"segurar_ms":1500},"codigo":"\/\/ Tons de cinza: média dos 3 canais (o olho é mais sensível ao verde)\nconst cinza = 0.299 * r + 0.587 * g + 0.114 * b;\n\n\/\/ Limiar (binarização): acima do limite vira branco, abaixo vira preto\nconst pixel = cinza \u003E limiar ? 255 : 0;"},{"id":12,"tipo":"bordas","titulo":"Bordas","conceito":"Antes da inteligência artificial, o computador achava formas procurando bordas: lugares onde a cor muda de repente. Isso é feito com um filtro que compara cada pixel com os vizinhos (convolução).","desafio":"Ajuste a sensibilidade até seu contorno aparecer bem marcado, sem virar um borrão.","destrava":"você enxergou como os filtros veem!","ajustes":{"min_bordas":4,"max_bordas":18,"segurar_ms":2000},"codigo":"\/\/ Filtro de Sobel: compara cada pixel (c) com os vizinhos\nconst gx = (c(x+1, y-1) + 2*c(x+1, y) + c(x+1, y+1)) - (c(x-1, y-1) + 2*c(x-1, y) + c(x-1, y+1));\nconst gy = (c(x-1, y+1) + 2*c(x, y+1) + c(x+1, y+1)) - (c(x-1, y-1) + 2*c(x, y-1) + c(x+1, y-1));\nconst forca = Math.hypot(gx, gy);  \/\/ quanto a cor muda ali\nconst ehBorda = forca \u003E limite;     \/\/ sensibilidade alta = limite baixo = mais bordas"},{"id":13,"tipo":"pontos","titulo":"A IA acha o corpo","conceito":"Um modelo de inteligência artificial (MediaPipe), treinado com milhares de fotos, acha 33 pontos do corpo em cada frame. Cada ponto vem com uma confiança: o quanto o modelo tem certeza de que está vendo aquilo.","desafio":"Esconda as duas mãos atrás das costas até a confiança dos pulsos cair. Depois mostre as mãos de novo.","destrava":"você viu a confiança da IA subir e descer!","ajustes":{"pontos":[15,16],"baixo":0.3,"alto":0.8,"segurar_ms":1000},"codigo":"const resultado = detector.detectForVideo(video, performance.now());\nconst pontos = resultado.landmarks[0]; \/\/ 33 pontos: {x, y, visibility}\nconst pulso = pontos[15];              \/\/ 15 = pulso esquerdo\nconsole.log(pulso.visibility);         \/\/ 0 = não vê, 1 = certeza"},{"id":14,"tipo":"angulo","titulo":"Do ponto ao ângulo","conceito":"Pontos sozinhos mudam quando você se mexe ou chega perto. Por isso transformamos pontos em características: a direção de cada osso, em graus. Ela é a mesma longe ou perto da câmera.","desafio":"Faça cada posição pedida e segure até a barra encher.","destrava":"você virou um transferidor humano!","ajustes":{"alvos":[{"osso":"bracoE","angulo":0,"rotulo":"Estique o braço esquerdo para o lado (0°)"},{"osso":"bracoE","angulo":-90,"rotulo":"Agora aponte o braço esquerdo para cima (-90°)"}],"tolerancia":15,"segurar_ms":2000},"codigo":"\/\/ Direção do osso que vai do ombro (a) até o cotovelo (b), em graus\nconst dx = (b.x - a.x) * largura;\nconst dy = (b.y - a.y) * altura;\nconst angulo = Math.atan2(dy, dx) * 180 \/ Math.PI;\n\/\/ direita = 0°, baixo = 90°, cima = -90°, esquerda = 180°"},{"id":15,"tipo":"comparar","titulo":"Isso é a pose?","conceito":"Para dar nota, o jogo compara o ângulo de cada osso com o da pose-alvo. A tolerância diz quanto pode errar: com 15° o jogo fica exigente, com 90° qualquer coisa vale.","desafio":"Imite o boneco azul até tirar a nota mínima. Depois teste o slider de tolerância e veja a nota mudar.","destrava":"agora você sabe como o jogo dá nota!","ajustes":{"nota_minima":0.85,"segurar_ms":1500,"tolerancia":45,"pose_id":2},"codigo":"\/\/ Para cada osso: quanto longe do alvo, dentro da tolerância\nconst d = Math.abs(aluno - alvo) % 360;\nconst diferenca = d \u003E 180 ? 360 - d : d; \/\/ 170° e -170° estão a 20°\nconst nota = Math.max(0, 1 - diferenca \/ tolerancia);\n\/\/ nota da pose = média das notas dos ossos"},{"id":16,"tipo":"livre","titulo":"Engane a IA","conceito":"Todo modelo aprende com exemplos e falha quando vê algo diferente do treino. Entender os limites é parte da visão computacional (e do uso responsável de IA).","desafio":"Tente fazer o esqueleto errar: pouca luz, duas pessoas na câmera, casaco largo, ficar de costas. O que confundiu mais? Por quê? Quando terminar a discussão, clique em Concluir.","destrava":"vocês conhecem os limites da IA. O jogo está liberado!","ajustes":{},"codigo":null}],"competicao":null,"versao":"9faec52516"};</script>
+<script type="module">
+// =======================================================================================
+// Rebola Ai — tudo o que aparece aqui vem do painel /admin (window.JDP).
+// A aula é uma sequência de experimentos com a câmera; o jogo libera quando todos passam.
+// =======================================================================================
+const C = window.JDP;
+const $ = (id) => document.getElementById(id);
+const T = C.tecnico;
+
+const OSSOS = { bracoE: [11, 13], antebracoE: [13, 15], bracoD: [12, 14], antebracoD: [14, 16] };
+const LISTA_OSSOS = Object.keys(OSSOS);
+const NOMES_OSSOS = { bracoE: 'braço esquerdo', antebracoE: 'antebraço esquerdo', bracoD: 'braço direito', antebracoD: 'antebraço direito' };
+const NOMES_PONTOS = {
+  0: 'nariz', 11: 'ombro esquerdo', 12: 'ombro direito', 13: 'cotovelo esquerdo', 14: 'cotovelo direito',
+  15: 'pulso esquerdo', 16: 'pulso direito', 23: 'quadril esquerdo', 24: 'quadril direito',
+};
+const COR = { perfeito: '#3cff8f', bom: '#ffd319', ruim: '#ff3e6c', neutro: '#ffffff', fantasma: '#2de2e6' };
+
+const CLASSES = C.pontuacao.classes; // da melhor para a pior
+const classificar = (nota) => CLASSES.find((c) => nota >= c.minimo) ?? CLASSES.at(-1);
+const corDaNota = (n) => {
+  if (n === undefined) return COR.neutro;
+  if (n >= CLASSES[0].minimo) return COR.perfeito;
+  if (n >= CLASSES[CLASSES.length - 2]?.minimo) return COR.bom;
+  return COR.ruim;
+};
+
+const POSES = new Map(C.poses.map((p) => [p.id, p]));
+const DIFICULDADES = C.dificuldades;
+const DANCAS = C.dancas;
+const MUSICAS = C.musicas;
+
+// números do painel podem chegar como texto ("170"): converte com um valor padrão
+const num = (v, padrao) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? padrao : Number(v));
+
+// Linha do tempo de uma dança tocada com uma música (BPM + atraso da 1ª batida).
+function montarRodada(danca, musica) {
+  const batidaMs = 60000 / musica.bpm;
+  let batidas = danca.introBatidas;
+  const poses = danca.passos.map((passo) => {
+    const p = POSES.get(passo.poseId);
+    const pose = { t: Math.round(musica.offsetMs + batidas * batidaMs), rotulo: p.rotulo, assinatura: p.assinatura };
+    batidas += passo.batidas;
+    return pose;
+  });
+  return { poses, duracaoMs: Math.round(musica.offsetMs + batidas * batidaMs + 1500) };
+}
+
+// ---------------------------------------------------------------------------------------
+// Visão computacional: as mesmas ideias que aparecem em "Ver como é feito" nas missões
+// ---------------------------------------------------------------------------------------
+const ehCelular = matchMedia('(pointer: coarse)').matches;
+let streamAtual = null;
+
+// abre a câmera (a frontal, ou a escolhida no botão 📷) e já tira o zoom ao máximo que o aparelho deixar
+async function abrirCamera(video, deviceId = null) {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('este navegador não libera a câmera aqui (a página precisa abrir em https ou localhost)');
+  streamAtual?.getTracks().forEach((t) => t.stop());
+  // no celular não pedimos tamanho: o padrão (4:3) costuma usar o sensor inteiro, que é o campo de visão mais aberto
+  const tamanho = ehCelular ? {} : { width: { ideal: 1280 }, height: { ideal: 720 } };
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: deviceId ? { ...tamanho, deviceId: { exact: deviceId } } : { ...tamanho, facingMode: 'user' },
+    audio: false,
+  });
+  streamAtual = stream;
+  video.srcObject = stream;
+  await video.play();
+  const track = stream.getVideoTracks()[0];
+  const zoom = track.getCapabilities?.().zoom;
+  if (zoom && typeof zoom.min === 'number') {
+    try { await track.applyConstraints({ advanced: [{ zoom: zoom.min }] }); } catch { /* o aparelho não deixou */ }
+  }
+}
+
+async function carregarDetector() {
+  const base = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${T.mediapipeVersao}`;
+  const { FilesetResolver, PoseLandmarker } = await import(`${base}/vision_bundle.mjs`);
+  const vision = await FilesetResolver.forVisionTasks(`${base}/wasm`);
+  const criar = (delegate) => PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_${T.modelo}/float16/latest/pose_landmarker_${T.modelo}.task`,
+      delegate,
+    },
+    runningMode: 'VIDEO',
+    numPoses: 1,
+  });
+  return criar('GPU').catch(() => criar('CPU'));
+}
+
+// 33 pontos {x, y, visibility} da pessoa no frame, ou null se não achou ninguém
+function encontrarCorpo(detector, video, instante) {
+  const resultado = detector.detectForVideo(video, instante);
+  return resultado.landmarks?.[0] ?? null;
+}
+
+// direção do osso de a até b, em graus, na imagem original (sem espelho)
+function direcao(a, b, w, h) {
+  return (Math.atan2((b.y - a.y) * h, (b.x - a.x) * w) * 180) / Math.PI;
+}
+
+function diferenca(a, b) {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+// nota de 0 a 1 da pose (assinatura = ângulo de cada osso) comparada com o alvo
+function comparar(assinatura, alvo, tolerancia) {
+  const porOsso = {};
+  const ossos = LISTA_OSSOS.filter((o) => alvo[o] !== undefined && alvo[o] !== null);
+  for (const osso of ossos) {
+    if (assinatura[osso] === undefined) continue;
+    porOsso[osso] = Math.max(0, 1 - diferenca(assinatura[osso], alvo[osso]) / tolerancia);
+  }
+  const notas = Object.values(porOsso);
+  if (!ossos.length || notas.length < ossos.length / 2) return { nota: 0, porOsso };
+  return { nota: notas.reduce((s, n) => s + n, 0) / notas.length, porOsso };
+}
+
+function suavizar(anterior, atual, suavizacao) {
+  if (!anterior || suavizacao <= 0) return atual;
+  return atual.map((p, i) => ({ ...p, x: (1 - suavizacao) * p.x + suavizacao * anterior[i].x, y: (1 - suavizacao) * p.y + suavizacao * anterior[i].y }));
+}
+
+function calcularAssinatura(pontos, w, h) {
+  const s = {};
+  for (const osso of LISTA_OSSOS) {
+    const [i, j] = OSSOS[osso];
+    if (!visivel(pontos[i]) || !visivel(pontos[j])) continue;
+    s[osso] = direcao(pontos[i], pontos[j], w, h);
+  }
+  return s;
+}
+
+// ---------------------------------------------------------------------------------------
+// Desenho (espelhado como o vídeo; as contas usam a imagem original)
+// ---------------------------------------------------------------------------------------
+const naTela = (p, w, h) => ({ x: (1 - p.x) * w, y: p.y * h });
+const visivel = (p) => !!p && (p.visibility ?? 1) >= T.visibilidadeMin;
+
+function linha(ctx, a, b, cor, largura) {
+  ctx.strokeStyle = cor; ctx.lineWidth = largura; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+}
+function circulo(ctx, c, r, cor, largura) {
+  ctx.strokeStyle = cor; ctx.lineWidth = largura;
+  ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.stroke();
+}
+function texto(ctx, txt, x, y, cor, tamanho) {
+  ctx.font = `700 ${tamanho}px system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(txt, x, y);
+  ctx.fillStyle = cor; ctx.fillText(txt, x, y);
+}
+
+function desenharEsqueleto(ctx, pontos, w, h, cores = {}, assinatura = null) {
+  const g = Math.max(4, w / 110);
+  const P = (i) => naTela(pontos[i], w, h);
+  const discreto = 'rgba(255,255,255,0.45)';
+  for (const [i, j] of [[11, 12], [11, 23], [12, 24], [23, 24]]) {
+    if (visivel(pontos[i]) && visivel(pontos[j])) linha(ctx, P(i), P(j), discreto, g * 0.6);
+  }
+  if (visivel(pontos[0]) && visivel(pontos[11]) && visivel(pontos[12])) {
+    circulo(ctx, P(0), Math.hypot(P(11).x - P(12).x, P(11).y - P(12).y) * 0.3, discreto, g * 0.6);
+  }
+  for (const osso of LISTA_OSSOS) {
+    const [i, j] = OSSOS[osso];
+    if (!visivel(pontos[i]) || !visivel(pontos[j])) continue;
+    const cor = cores[osso] ?? COR.neutro;
+    ctx.shadowColor = cor; ctx.shadowBlur = g * 2;
+    linha(ctx, P(i), P(j), cor, g);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    for (const k of [i, j]) { ctx.beginPath(); ctx.arc(P(k).x, P(k).y, g * 0.8, 0, Math.PI * 2); ctx.fill(); }
+    if (assinatura && assinatura[osso] !== undefined) {
+      texto(ctx, `${Math.round(assinatura[osso])}°`, (P(i).x + P(j).x) / 2, (P(i).y + P(j).y) / 2, cor, Math.max(14, w / 40));
+    }
+  }
+}
+
+function ancora(pontos, w, h) {
+  if (pontos && visivel(pontos[11]) && visivel(pontos[12])) {
+    const ombroE = { x: pontos[11].x * w, y: pontos[11].y * h };
+    const ombroD = { x: pontos[12].x * w, y: pontos[12].y * h };
+    return { ombroE, ombroD, escala: Math.max(w * 0.06, Math.hypot(ombroE.x - ombroD.x, ombroE.y - ombroD.y)) };
+  }
+  return ancoraPadrao(w, h, Math.min(w, h) * 0.22, h * 0.32);
+}
+const ancoraPadrao = (w, h, escala, topo) => ({ ombroE: { x: w / 2 + escala / 2, y: topo }, ombroD: { x: w / 2 - escala / 2, y: topo }, escala });
+
+function desenharBoneco(ctx, alvo, anc, w, cor, alpha, grossura) {
+  const espelho = (p) => ({ x: w - p.x, y: p.y });
+  const ponta = (de, graus, tamanho) => graus === undefined ? null
+    : { x: de.x + Math.cos((graus * Math.PI) / 180) * tamanho * anc.escala, y: de.y + Math.sin((graus * Math.PI) / 180) * tamanho * anc.escala };
+  const tracar = (a, b, g = grossura) => linha(ctx, espelho(a), espelho(b), cor, g);
+  const { ombroE, ombroD, escala } = anc;
+  ctx.save();
+  ctx.globalAlpha = alpha; ctx.shadowColor = cor; ctx.shadowBlur = grossura * 2;
+  const quadrilE = { x: ombroE.x - escala * 0.15, y: ombroE.y + escala * 1.4 };
+  const quadrilD = { x: ombroD.x + escala * 0.15, y: ombroD.y + escala * 1.4 };
+  tracar(ombroE, ombroD, grossura * 0.6); tracar(ombroE, quadrilE, grossura * 0.6);
+  tracar(ombroD, quadrilD, grossura * 0.6); tracar(quadrilE, quadrilD, grossura * 0.6);
+  const pescoco = espelho({ x: (ombroE.x + ombroD.x) / 2, y: (ombroE.y + ombroD.y) / 2 });
+  circulo(ctx, { x: pescoco.x, y: pescoco.y - escala * 0.55 }, escala * 0.3, cor, grossura * 0.6);
+  for (const [ombro, braco, antebraco] of [[ombroE, 'bracoE', 'antebracoE'], [ombroD, 'bracoD', 'antebracoD']]) {
+    const cotovelo = ponta(ombro, alvo[braco], 0.85);
+    if (!cotovelo) continue;
+    tracar(ombro, cotovelo);
+    const pulso = ponta(cotovelo, alvo[antebraco], 0.75);
+    if (pulso) tracar(cotovelo, pulso);
+  }
+  ctx.restore();
+}
+
+function desenharMiniatura(canvas, alvo) {
+  const c = canvas.getContext('2d');
+  const { width: w, height: h } = canvas;
+  c.clearRect(0, 0, w, h);
+  desenharBoneco(c, alvo, ancoraPadrao(w, h, h * 0.26, h * 0.45), w, COR.fantasma, 1, Math.max(3, w / 22));
+}
+
+function novaMiniatura(alvo, tamanho = 64) {
+  const c = document.createElement('canvas');
+  c.width = c.height = tamanho * 2;
+  c.style.width = c.style.height = `${tamanho}px`;
+  c.className = 'mini';
+  desenharMiniatura(c, alvo);
+  return c;
+}
+
+// imagem processada desenhada por cima do vídeo, espelhada como ele
+const proc = document.createElement('canvas');
+const pctx = proc.getContext('2d', { willReadFrequently: true });
+function copiarVideo(largura, w, h) {
+  proc.width = largura;
+  proc.height = Math.max(1, Math.round((largura * h) / w));
+  pctx.drawImage(video, 0, 0, proc.width, proc.height);
+  return pctx.getImageData(0, 0, proc.width, proc.height);
+}
+function desenharEspelhado(origem, w, h, suave) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = suave;
+  ctx.translate(w, 0); ctx.scale(-1, 1);
+  ctx.drawImage(origem, 0, 0, w, h);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------------------
+// Música: arquivo (do painel ou do computador) ou batida sintetizada. Também é o relógio do jogo.
+// ---------------------------------------------------------------------------------------
+class MusicaArquivo {
+  constructor(url) { this.audio = new Audio(url); this.audio.preload = 'auto'; }
+  async iniciar() { this.audio.currentTime = 0; await this.audio.play(); }
+  parar() { this.audio.pause(); }
+  agoraMs() { return this.audio.currentTime * 1000; }
+}
+
+class Batida {
+  constructor(bpm, duracaoMs) { this.bpm = bpm; this.duracaoMs = duracaoMs; this.ctx = null; }
+
+  async iniciar() {
+    this.ctx = new AudioContext();
+    await this.ctx.resume();
+    this.saida = this.ctx.createGain(); this.saida.gain.value = 0.8; this.saida.connect(this.ctx.destination);
+    this.ruido = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.5, this.ctx.sampleRate);
+    const d = this.ruido.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this.inicio = this.ctx.currentTime + 0.15;
+    this.passo = 0;
+    this.timer = setInterval(() => this.agendar(), 50);
+    this.agendar();
+  }
+
+  parar() { clearInterval(this.timer); this.ctx?.close(); this.ctx = null; }
+  agoraMs() { return this.ctx ? (this.ctx.currentTime - this.inicio) * 1000 : -Infinity; }
+
+  agendar() {
+    if (!this.ctx) return;
+    const colcheia = 30 / this.bpm;
+    while (this.inicio + this.passo * colcheia < this.ctx.currentTime + 0.2) {
+      const t = this.inicio + this.passo * colcheia;
+      if ((t - this.inicio) * 1000 > this.duracaoMs) return;
+      const p = this.passo++;
+      const raiz = [110, 87.31, 130.81, 98][Math.floor(p / 8) % 4];
+      if (p % 2 === 0) this.bumbo(t); else this.ruidoFiltrado(t, 'highpass', 7000, 0.12, 0.05);
+      if (p % 4 === 2) this.ruidoFiltrado(t, 'bandpass', 1600, 0.45, 0.16);
+      this.baixo(t, p % 2 === 0 ? raiz : raiz * 2, colcheia * 0.9);
+    }
+  }
+
+  bumbo(t) {
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    o.connect(g).connect(this.saida); o.start(t); o.stop(t + 0.3);
+  }
+
+  ruidoFiltrado(t, tipo, freq, ganho, dur) {
+    const s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.ruido; f.type = tipo; f.frequency.value = freq;
+    g.gain.setValueAtTime(ganho, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f).connect(g).connect(this.saida); s.start(t); s.stop(t + dur + 0.02);
+  }
+
+  baixo(t, freq, dur) {
+    const o = this.ctx.createOscillator(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = freq;
+    f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(200, t + dur);
+    g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(f).connect(g).connect(this.saida); o.start(t); o.stop(t + dur + 0.02);
+  }
+}
+
+// ---------------------------------------------------------------------------------------
+// Pontuação: cada pose vale numa janela em volta do seu instante; fica a MELHOR nota da janela.
+// ---------------------------------------------------------------------------------------
+class Placar {
+  constructor(poses, janelaMs) {
+    this.poses = poses; this.janelaMs = janelaMs;
+    this.melhor = poses.map(() => 0); this.fechada = poses.map(() => false);
+    this.pontos = 0; this.combo = 0; this.comboMax = 0;
+    this.contagem = Object.fromEntries(CLASSES.map((c) => [c.rotulo, 0]));
+  }
+  get multiplicador() {
+    const { passo, incremento, maximo } = C.pontuacao.combo;
+    return Math.min(maximo, 1 + Math.floor(this.combo / passo) * incremento);
+  }
+  avaliar(agora, assin, tolerancia) {
+    const novos = [];
+    this.poses.forEach((p, i) => {
+      if (this.fechada[i]) return;
+      if (assin && Math.abs(agora - p.t) <= this.janelaMs) {
+        this.melhor[i] = Math.max(this.melhor[i], comparar(assin, p.assinatura, tolerancia).nota);
+      }
+      if (agora > p.t + this.janelaMs) {
+        this.fechada[i] = true;
+        const classe = classificar(this.melhor[i]);
+        const errou = classe === CLASSES.at(-1);
+        this.combo = errou ? 0 : this.combo + 1;
+        this.comboMax = Math.max(this.comboMax, this.combo);
+        const pontos = Math.round(classe.pontos * this.multiplicador);
+        this.pontos += pontos;
+        this.contagem[classe.rotulo]++;
+        novos.push({ classe, pontos });
+      }
+    });
+    return novos;
+  }
+  alvoAtual() { const i = this.fechada.indexOf(false); return i === -1 ? null : i; }
+  terminou() { return this.fechada.every(Boolean); }
+}
+
+// ---------------------------------------------------------------------------------------
+// Estado da página
+// ---------------------------------------------------------------------------------------
+const MISSOES = C.missoes.map((m, i) => ({ ...m, n: i + 1, a: m.ajustes ?? {} }));
+const chave = (m) => `jdp:feita:${m.id}`;
+const feitas = new Set(MISSOES.filter((m) => localStorage.getItem(chave(m)) === '1').map((m) => m.id));
+const feita = (m) => feitas.has(m.id);
+const jogoLiberado = () => C.site.jogoLiberado || MISSOES.every(feita);
+
+const estado = {
+  modo: 'aula',
+  detector: null, carregandoModelo: false, erroModelo: null, erroCamera: null, abrindoCamera: true,
+  pontos: null,
+  atual: null,                  // missão aberta no painel (o experimento que está no palco)
+  exp: {},                      // id da missão -> estado do experimento (controles, progresso)
+  fase: 'menu',
+  danca: DANCAS[0] ?? null,
+  musica: null,                 // { id, nome, url, bpm, offsetMs } ou null = batida do jogo
+  arquivoLocal: null,           // { url, nome, bpm } escolhido do computador
+  dificuldade: DIFICULDADES[Math.floor((DIFICULDADES.length - 1) / 2)] ?? { nome: '', tolerancia: 45, janelaMs: 400 },
+  rodada: null, placar: null, relogio: null, itensFila: [],
+};
+
+const musicaSugerida = (danca) => MUSICAS.find((m) => m.id === danca?.musicaSugerida) ?? null;
+estado.musica = musicaSugerida(estado.danca);
+
+// Competição: dança, dificuldade e música travadas no painel (para o ranking ser justo)
+const COMP = (() => {
+  if (!C.competicao) return null;
+  const danca = DANCAS.find((d) => d.id === C.competicao.dancaId);
+  const dificuldade = DIFICULDADES.find((d) => d.id === C.competicao.dificuldadeId);
+  if (!danca || !dificuldade) return null;
+  const m = C.competicao.musica;
+  const musica = m === 'batida' ? null : m === 'sugerida' ? musicaSugerida(danca) : MUSICAS.find((x) => x.id === m) ?? null;
+  return { danca, dificuldade, musica };
+})();
+if (COMP) Object.assign(estado, { danca: COMP.danca, dificuldade: COMP.dificuldade, musica: COMP.musica });
+
+// Ranking: só existe com o servidor (Laravel). No GitHub Pages fica desligado.
+const R = COMP && C.ranking ? C.ranking : null;
+estado.nome = localStorage.getItem('jdp:nome') ?? '';
+estado.envio = null; // resultado do envio para o ranking
+
+const video = $('video');
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+
+function mostrar(id, sim) { $(id).classList.toggle('escondido', !sim); }
+const escapar = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const pct = (v) => `${Math.round(v * 100)}%`;
+
+function comemorar(txt) {
+  const el = $('comemoracao');
+  el.textContent = txt;
+  el.classList.remove('anima');
+  void el.offsetWidth;
+  el.classList.add('anima');
+}
+
+// segura uma condição por um tempo: devolve de 0 a 1 (1 = segurou o suficiente)
+function segurar(x, nome, condicao, ms) {
+  const agora = performance.now();
+  if (!condicao) { x[nome] = null; return 0; }
+  x[nome] ??= agora;
+  return ms <= 0 ? 1 : Math.min(1, (agora - x[nome]) / ms);
+}
+
+// ---------------------------------------------------------------------------------------
+// Os experimentos. Cada tipo sabe: que controles mostra, o que desenha no palco e quando passou.
+// quadro() devolve { status (html do cartão), barra (0 a 1), hud: [título, valor] }.
+// ---------------------------------------------------------------------------------------
+const slider = (ctl, rotulo, min, max, passo, valor, ajuda, mostrarValor) => `
+  <label class="slider">
+    <span>${rotulo} <b data-valor="${ctl}">${mostrarValor(valor)}</b></span>
+    <input type="range" data-ctl="${ctl}" min="${min}" max="${max}" step="${passo}" value="${valor}" />
+    ${ajuda ? `<small class="nota">${ajuda}</small>` : ''}
+  </label>`;
+
+const MODOS_COR = { normal: 'Normal', cinza: 'Tons de cinza', vermelho: 'Só vermelho', verde: 'Só verde', azul: 'Só azul', limiar: 'Limiar' };
+const CANAIS = { r: 'vermelho', g: 'verde', b: 'azul' };
+const sensibilidadeParaLimite = (s) => 40 + (100 - s) * 4;
+
+const EXPERIMENTOS = {
+  // 1. A imagem é uma tabela de números
+  pixels: {
+    usaPose: false,
+    inicial: () => ({ colunas: 32 }),
+    controles: (m, x) => slider('colunas', 'Resolução', 8, 160, 4, x.colunas,
+      'Poucas colunas = pixels grandes. Toque no vídeo para ler os números de um pixel.', (v) => `${v} colunas`),
+    toque: true,
+    quadro(m, x, w, h) {
+      const img = copiarVideo(x.colunas, w, h);
+      desenharEspelhado(proc, w, h, false);
+      const cw = w / proc.width, ch = h / proc.height;
+      if (proc.width <= 40) {
+        ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 1; i < proc.width; i++) { ctx.moveTo(i * cw, 0); ctx.lineTo(i * cw, h); }
+        for (let j = 1; j < proc.height; j++) { ctx.moveTo(0, j * ch); ctx.lineTo(w, j * ch); }
+        ctx.stroke();
+      }
+      const canal = ['r', 'g', 'b'].includes(m.a.canal) ? m.a.canal : 'r';
+      const minimo = num(m.a.minimo, 170), maxOutros = num(m.a.max_outros, 110);
+      const pedido = `Procure um pixel com <b>${CANAIS[canal]} ≥ ${minimo}</b> e os outros dois ≤ ${maxOutros}.`;
+      if (!x.toque) return { status: `<div>${pedido}</div><div class="falta">👆 Toque em qualquer lugar do vídeo.</div>`, hud: [`${proc.width} × ${proc.height} pixels`, ''] };
+
+      const col = Math.min(proc.width - 1, Math.floor(x.toque.u * proc.width));
+      const lin = Math.min(proc.height - 1, Math.floor(x.toque.v * proc.height));
+      const k = (lin * proc.width + col) * 4;
+      const rgb = { r: img.data[k], g: img.data[k + 1], b: img.data[k + 2] };
+      const tx = (proc.width - 1 - col) * cw, ty = lin * ch;
+      ctx.lineWidth = Math.max(3, w / 200); ctx.strokeStyle = '#fff';
+      ctx.strokeRect(tx, ty, cw, ch);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(tx - 2, ty - 2, cw + 4, ch + 4);
+      const outros = ['r', 'g', 'b'].filter((c) => c !== canal);
+      const achou = rgb[canal] >= minimo && outros.every((c) => rgb[c] <= maxOutros);
+      if (achou) concluir(m);
+      const barra = (c, cor) => `<span>${c.toUpperCase()}</span><div class="trilho-h"><div style="width: ${(rgb[c] / 255) * 100}%; background: ${cor}"></div></div><span>${rgb[c]}</span>`;
+      return {
+        status: `<div><span class="amostra" style="background: rgb(${rgb.r}, ${rgb.g}, ${rgb.b})"></span>pixel na coluna ${col}, linha ${lin}</div>
+          <div class="rgb">${barra('r', '#ff4d4d')}${barra('g', '#3cff8f')}${barra('b', '#4d8bff')}</div>
+          <div>${pedido}</div>`,
+        hud: [`${proc.width} × ${proc.height} pixels`, `R ${rgb.r} · G ${rgb.g} · B ${rgb.b}`],
+      };
+    },
+  },
+
+  // 2. Canais de cor, tons de cinza e limiar
+  cores: {
+    usaPose: false,
+    inicial: () => ({ modo: 'normal', limiar: 128, tempo: {} }),
+    controles: (m, x) => `
+      <div class="linha">${Object.entries(MODOS_COR).map(([k, v]) =>
+        `<button class="botao pequeno secundario ${x.modo === k ? 'ativa' : ''}" data-modo-cor="${k}">${v}</button>`).join('')}</div>
+      ${slider('limiar', 'Limiar', 0, 255, 1, x.limiar, 'Só vale no modo "Limiar": acima vira branco, abaixo vira preto.', (v) => v)}`,
+    quadro(m, x, w, h) {
+      const img = copiarVideo(320, w, h);
+      const d = img.data;
+      if (x.modo !== 'normal') {
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          const cinza = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (x.modo === 'cinza') d[i] = d[i + 1] = d[i + 2] = cinza;
+          else if (x.modo === 'vermelho') { d[i + 1] = 0; d[i + 2] = 0; }
+          else if (x.modo === 'verde') { d[i] = 0; d[i + 2] = 0; }
+          else if (x.modo === 'azul') { d[i] = 0; d[i + 1] = 0; }
+          else if (x.modo === 'limiar') d[i] = d[i + 1] = d[i + 2] = cinza > x.limiar ? 255 : 0;
+        }
+        pctx.putImageData(img, 0, 0);
+      }
+      desenharEspelhado(proc, w, h, true);
+
+      const modos = (Array.isArray(m.a.modos) && m.a.modos.length ? m.a.modos : ['cinza', 'vermelho', 'verde', 'azul', 'limiar']).filter((k) => MODOS_COR[k]);
+      const ms = num(m.a.segurar_ms, 1500);
+      const agora = performance.now();
+      if (x.ultimo && modos.includes(x.modo)) x.tempo[x.modo] = (x.tempo[x.modo] ?? 0) + Math.min(200, agora - x.ultimo);
+      x.ultimo = agora;
+      const ok = (k) => (x.tempo[k] ?? 0) >= ms;
+      if (modos.every(ok)) concluir(m);
+      return {
+        status: `<ul>${modos.map((k) => `<li class="${ok(k) ? 'ok' : k === x.modo ? 'agora' : 'falta'}">${ok(k) ? '✔' : k === x.modo ? '▶' : '○'} ${MODOS_COR[k]}</li>`).join('')}</ul>`,
+        barra: modos.reduce((s, k) => s + Math.min(1, (x.tempo[k] ?? 0) / ms), 0) / modos.length,
+        hud: [MODOS_COR[x.modo], x.modo === 'limiar' ? `limiar ${x.limiar}` : ''],
+      };
+    },
+  },
+
+  // 3. Filtro de bordas (Sobel)
+  bordas: {
+    usaPose: false,
+    inicial: () => ({ sensibilidade: 30 }),
+    controles: (m, x) => slider('sensibilidade', 'Sensibilidade', 0, 100, 1, x.sensibilidade,
+      'Mais sensível = qualquer mudancinha de cor vira borda.', (v) => v),
+    quadro(m, x, w, h) {
+      const img = copiarVideo(160, w, h);
+      const { width: pw, height: ph } = proc;
+      const d = img.data;
+      const cinza = new Float32Array(pw * ph);
+      for (let i = 0, k = 0; k < cinza.length; i += 4, k++) cinza[k] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const c = (px, py) => cinza[py * pw + px];
+      const limite = sensibilidadeParaLimite(x.sensibilidade);
+      let bordas = 0;
+      for (let y = 0; y < ph; y++) {
+        for (let px = 0; px < pw; px++) {
+          const k = (y * pw + px) * 4;
+          let eh = false;
+          if (px > 0 && y > 0 && px < pw - 1 && y < ph - 1) {
+            const gx = (c(px + 1, y - 1) + 2 * c(px + 1, y) + c(px + 1, y + 1)) - (c(px - 1, y - 1) + 2 * c(px - 1, y) + c(px - 1, y + 1));
+            const gy = (c(px - 1, y + 1) + 2 * c(px, y + 1) + c(px + 1, y + 1)) - (c(px - 1, y - 1) + 2 * c(px, y - 1) + c(px + 1, y - 1));
+            eh = Math.hypot(gx, gy) > limite;
+          }
+          if (eh) bordas++;
+          d[k] = 45; d[k + 1] = 226; d[k + 2] = 230; d[k + 3] = eh ? 255 : 0;
+        }
+      }
+      pctx.putImageData(img, 0, 0);
+      ctx.fillStyle = 'rgba(13, 11, 26, .85)';
+      ctx.fillRect(0, 0, w, h);
+      desenharEspelhado(proc, w, h, false);
+
+      const fatia = (bordas / (pw * ph)) * 100;
+      const min = num(m.a.min_bordas, 4), max = num(m.a.max_bordas, 18);
+      const dentro = fatia >= min && fatia <= max;
+      const p = segurar(x, 'desde', dentro, num(m.a.segurar_ms, 2000));
+      if (p >= 1) concluir(m);
+      const dica = fatia < min ? 'Pouca borda: aumente a sensibilidade.' : fatia > max ? 'Borda demais (virou borrão): diminua a sensibilidade.' : 'No ponto! Segure assim…';
+      return {
+        status: `<div><b>${fatia.toFixed(1).replace('.', ',')}%</b> da imagem é borda (alvo: entre ${min}% e ${max}%)</div>
+          <div class="${dentro ? 'ok' : 'agora'}">${dica}</div>`,
+        barra: p,
+        hud: ['Bordas', `${fatia.toFixed(1).replace('.', ',')}%`],
+      };
+    },
+  },
+
+  // 4. Os 33 pontos e a confiança do modelo
+  pontos: {
+    usaPose: true,
+    inicial: () => ({ etapa: 0 }),
+    controles: () => '',
+    quadro(m, x, w, h) {
+      const pontos = estado.pontos;
+      const escolhidos = (Array.isArray(m.a.pontos) && m.a.pontos.length ? m.a.pontos : [15, 16]).map(Number);
+      const baixo = num(m.a.baixo, 0.3), alto = num(m.a.alto, 0.8), ms = num(m.a.segurar_ms, 1000);
+      if (pontos) {
+        desenharEsqueleto(ctx, pontos, w, h);
+        const r = Math.max(4, w / 150);
+        pontos.forEach((p, i) => {
+          const v = p.visibility ?? 1;
+          const t = naTela(p, w, h);
+          ctx.fillStyle = `hsl(${Math.round(v * 120)}, 90%, 55%)`;
+          ctx.beginPath(); ctx.arc(t.x, t.y, escolhidos.includes(i) ? r * 2 : r, 0, Math.PI * 2); ctx.fill();
+          if (escolhidos.includes(i)) texto(ctx, `${i} · ${pct(v)}`, t.x, t.y - r * 4, ctx.fillStyle, Math.max(13, w / 50));
+        });
+      }
+      const vis = (i) => (pontos ? pontos[i]?.visibility ?? 0 : null);
+      const etapas = [
+        `Esconda: confiança de ${escolhidos.map((i) => NOMES_PONTOS[i] ?? `ponto ${i}`).join(' e ')} abaixo de ${pct(baixo)}`,
+        `Mostre de novo: confiança acima de ${pct(alto)}`,
+      ];
+      const cond = pontos && (x.etapa === 0 ? escolhidos.every((i) => vis(i) < baixo) : escolhidos.every((i) => vis(i) > alto));
+      const p = segurar(x, 'desde', cond, ms);
+      if (p >= 1 && x.etapa < 2) { x.etapa++; x.desde = null; if (x.etapa >= 2) concluir(m); }
+      const linhaPonto = (i) => {
+        const v = vis(i) ?? 0;
+        return `<span>${i} · ${NOMES_PONTOS[i] ?? 'ponto'}</span><div class="trilho-h"><div style="width: ${v * 100}%; background: hsl(${Math.round(v * 120)}, 90%, 55%)"></div></div><span>${pct(v)}</span>`;
+      };
+      return {
+        status: `${pontos ? `<div class="confianca">${escolhidos.map(linhaPonto).join('')}</div>` : '<div class="agora">Ninguém na câmera: fique de frente, da cintura para cima.</div>'}
+          <ul>${etapas.map((t, k) => `<li class="${k < x.etapa ? 'ok' : k === x.etapa ? 'agora' : 'falta'}">${k < x.etapa ? '✔' : k === x.etapa ? '▶' : '○'} ${t}</li>`).join('')}</ul>`,
+        barra: Math.min(1, (x.etapa + p) / 2),
+        hud: ['33 pontos do corpo', pontos ? escolhidos.map((i) => `${i}: ${pct(vis(i))}`).join(' · ') : 'ninguém na câmera'],
+      };
+    },
+  },
+
+  // 5. Do ponto à característica: a direção de cada osso
+  angulo: {
+    usaPose: true,
+    inicial: () => ({ etapa: 0 }),
+    controles: () => '<p class="nota">Na imagem original (sem espelho): para o lado de fora do braço esquerdo = 0°, para baixo = 90°, para cima = -90°, lado de fora do braço direito = 180°.</p>',
+    quadro(m, x, w, h) {
+      const pontos = estado.pontos;
+      const alvos = (Array.isArray(m.a.alvos) ? m.a.alvos : []).filter((a) => OSSOS[a.osso]).map((a) => ({ ...a, angulo: num(a.angulo, 0) }));
+      if (!alvos.length) return { status: '<div class="erro">Esta missão não tem posições cadastradas no painel /admin.</div>' };
+      const tol = num(m.a.tolerancia, 15);
+      const alvo = alvos[Math.min(x.etapa, alvos.length - 1)];
+      const assin = pontos ? calcularAssinatura(pontos, w, h) : {};
+      const atual = assin[alvo.osso];
+      const erro = atual === undefined ? null : diferenca(atual, alvo.angulo);
+      const cores = { [alvo.osso]: erro === null ? COR.neutro : erro <= tol ? COR.perfeito : erro <= tol * 2 ? COR.bom : COR.ruim };
+
+      const [i, j] = OSSOS[alvo.osso];
+      if (pontos && visivel(pontos[i])) {
+        const de = naTela(pontos[i], w, h);
+        const ate = visivel(pontos[j]) ? naTela(pontos[j], w, h) : null;
+        const tam = ate ? Math.hypot(ate.x - de.x, ate.y - de.y) : w * 0.15;
+        const rad = ((180 - alvo.angulo) * Math.PI) / 180; // espelhado na tela
+        ctx.save();
+        ctx.setLineDash([12, 10]);
+        linha(ctx, de, { x: de.x + Math.cos(rad) * tam * 1.2, y: de.y + Math.sin(rad) * tam * 1.2 }, COR.fantasma, Math.max(3, w / 160));
+        ctx.restore();
+      }
+      if (pontos) desenharEsqueleto(ctx, pontos, w, h, cores, assin);
+
+      const p = x.etapa < alvos.length ? segurar(x, 'desde', erro !== null && erro <= tol, num(m.a.segurar_ms, 2000)) : 1;
+      if (p >= 1 && x.etapa < alvos.length) { x.etapa++; x.desde = null; if (x.etapa >= alvos.length) concluir(m); }
+      return {
+        status: `<div>${atual === undefined ? `Não estou vendo o ${NOMES_OSSOS[alvo.osso]}.` : `${NOMES_OSSOS[alvo.osso]}: <b>${Math.round(atual)}°</b> · alvo ${alvo.angulo}° · pode errar ${tol}°`}</div>
+          <ul>${alvos.map((a, k) => `<li class="${k < x.etapa ? 'ok' : k === x.etapa ? 'agora' : 'falta'}">${k < x.etapa ? '✔' : k === x.etapa ? '▶' : '○'} ${escapar(a.rotulo || `${NOMES_OSSOS[a.osso]} em ${a.angulo}°`)}</li>`).join('')}</ul>`,
+        barra: Math.min(1, (x.etapa + p) / alvos.length),
+        hud: [escapar(alvo.rotulo || NOMES_OSSOS[alvo.osso]), atual === undefined ? '' : `${Math.round(atual)}° (alvo ${alvo.angulo}°)`],
+      };
+    },
+  },
+
+  // 6. Comparar com a pose-alvo: nota e tolerância
+  comparar: {
+    usaPose: true,
+    inicial: (m) => ({ tolerancia: num(m.a.tolerancia, C.aula.tolerancia) }),
+    controles: (m, x) => slider('tolerancia', 'Tolerância', 10, 90, 5, x.tolerancia,
+      'Quanto cada osso pode errar antes de a nota dele zerar.', (v) => `${v}°`),
+    quadro(m, x, w, h) {
+      const pose = POSES.get(num(m.a.pose_id, -1)) ?? null;
+      if (!pose) return { status: '<div class="erro">Escolha a pose-alvo desta missão no painel /admin.</div>' };
+      const pontos = estado.pontos;
+      const minima = num(m.a.nota_minima, 0.85);
+      desenharBoneco(ctx, pose.assinatura, ancora(pontos, w, h), w, COR.fantasma, 0.4, Math.max(5, w / 90));
+      const assin = pontos ? calcularAssinatura(pontos, w, h) : null;
+      const r = assin ? comparar(assin, pose.assinatura, x.tolerancia) : { nota: 0, porOsso: {} };
+      if (pontos) desenharEsqueleto(ctx, pontos, w, h, Object.fromEntries(Object.entries(r.porOsso).map(([o, n]) => [o, corDaNota(n)])));
+      const p = segurar(x, 'desde', r.nota >= minima, num(m.a.segurar_ms, 1500));
+      if (p >= 1) concluir(m);
+      const linhas = LISTA_OSSOS.filter((o) => pose.assinatura[o] !== undefined).map((o) =>
+        `<span>${NOMES_OSSOS[o]}</span><div class="trilho-h"><div style="width: ${(r.porOsso[o] ?? 0) * 100}%; background: ${corDaNota(r.porOsso[o])}"></div></div><span>${r.porOsso[o] === undefined ? '—' : pct(r.porOsso[o])}</span>`);
+      return {
+        status: `<div>Pose-alvo: <b>${escapar(pose.rotulo)}</b> · nota <b style="color: ${corDaNota(r.nota)}">${pct(r.nota)}</b> (precisa de ${pct(minima)})</div>
+          <div class="confianca">${linhas.join('')}</div>`,
+        barra: p,
+        hud: [escapar(pose.rotulo), assin ? `${pct(r.nota)} · ${escapar(classificar(r.nota).rotulo)}` : ''],
+      };
+    },
+  },
+
+  // 7. Livre: discussão, a pessoa conclui quando quiser
+  livre: {
+    usaPose: true,
+    inicial: () => ({}),
+    controles: (m) => `<button class="botao pequeno" data-acao="concluir" ${feita(m) ? 'disabled' : ''}>✔ Concluir</button>`,
+    quadro(m, x, w, h) {
+      if (estado.pontos) desenharEsqueleto(ctx, estado.pontos, w, h, {}, calcularAssinatura(estado.pontos, w, h));
+      return { status: estado.pontos ? '<div>O esqueleto está aparecendo. Agora tente fazer ele errar!</div>' : '<div class="agora">Sem esqueleto: a IA não achou ninguém. O que causou isso?</div>', hud: ['Engane a IA', ''] };
+    },
+  },
+};
+
+const experimento = (m) => EXPERIMENTOS[m?.tipo] ?? null;
+const precisaDePose = () => estado.modo === 'jogo' || !estado.atual || experimento(estado.atual)?.usaPose;
+const dadosDe = (m) => (estado.exp[m.id] ??= experimento(m)?.inicial(m) ?? {});
+
+function atualizarAvisoPalco() {
+  let html = '', erro = false;
+  if (estado.erroCamera) {
+    html = `<div class="cadeado">📷</div><strong>Não consegui abrir a câmera</strong><span>${estado.erroCamera}</span><button class="botao" data-acao="camera">Tentar de novo</button>`;
+    erro = true;
+  } else if (estado.abrindoCamera) {
+    html = 'Abrindo a câmera… (se o navegador perguntar, clique em <b>Permitir</b>)';
+  } else if (precisaDePose() && !estado.detector) {
+    html = estado.erroModelo ?? 'Carregando o modelo de pose…';
+    erro = !!estado.erroModelo;
+  }
+  $('aviso-palco').innerHTML = html;
+  $('aviso-palco').classList.toggle('erro', erro);
+  mostrar('aviso-palco', !!html);
+}
+
+// ---------------------------------------------------------------------------------------
+// Loop
+// ---------------------------------------------------------------------------------------
+let ultimoTempoVideo = -1;
+let ultimoStatus = 0;
+
+function loop() {
+  requestAnimationFrame(loop);
+  if (video.readyState < 2 || !video.videoWidth) return;
+  const w = video.videoWidth, h = video.videoHeight;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+    $('palco').style.setProperty('--proporcao', String(w / h));
+  }
+  if (estado.detector && precisaDePose() && video.currentTime !== ultimoTempoVideo) {
+    ultimoTempoVideo = video.currentTime;
+    try {
+      const novos = encontrarCorpo(estado.detector, video, performance.now());
+      estado.pontos = novos ? suavizar(estado.pontos, novos, C.aula.suavizacao) : null;
+    } catch (e) {
+      estado.pontos = null;
+      console.error('Erro ao procurar o corpo:', e);
+    }
+  }
+  ctx.clearRect(0, 0, w, h);
+  try {
+    if (estado.modo === 'aula') quadroAula(w, h);
+    else quadroJogo(w, h);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function quadroAula(w, h) {
+  const m = estado.atual;
+  const exp = experimento(m);
+  if (!exp) {
+    if (estado.pontos) desenharEsqueleto(ctx, estado.pontos, w, h);
+    $('hud-titulo').textContent = ''; $('hud-valor').textContent = '';
+    return;
+  }
+  if (exp.usaPose && !estado.detector) return;
+  const r = exp.quadro(m, dadosDe(m), w, h) ?? {};
+  if (performance.now() - ultimoStatus < 120 || estado.atual !== m) return; // texto do cartão ~8x por segundo
+  ultimoStatus = performance.now();
+  const cartao = cartoes[m.id];
+  if (feita(m)) r.status = `<div class="ok">✔ Missão completa${m.destrava ? `: ${escapar(m.destrava)}` : ''}</div>${r.status ?? ''}`;
+  cartao.status.innerHTML = r.status ?? '';
+  cartao.barra.style.width = `${(feita(m) ? 1 : r.barra ?? 0) * 100}%`;
+  cartao.barra.parentElement.classList.toggle('escondido', r.barra === undefined && !feita(m));
+  $('hud-titulo').innerHTML = r.hud?.[0] ?? '';
+  $('hud-valor').innerHTML = r.hud?.[1] ?? '';
+}
+
+function quadroJogo(w, h) {
+  const pontos = estado.pontos;
+  const { placar, relogio, rodada } = estado;
+  if (estado.fase !== 'jogando') {
+    if (pontos) desenharEsqueleto(ctx, pontos, w, h);
+    return;
+  }
+  const agora = relogio.agoraMs();
+  const tol = estado.dificuldade.tolerancia;
+  const assin = pontos ? calcularAssinatura(pontos, w, h) : null;
+  for (const r of placar.avaliar(agora, assin, tol)) mostrarFeedback(r);
+
+  let cores = {};
+  const i = placar.alvoAtual();
+  if (i !== null) {
+    const falta = placar.poses[i].t - agora;
+    if (falta < T.antecedenciaMs) {
+      const naHora = Math.abs(falta) <= placar.janelaMs;
+      const alpha = naHora ? 0.75 : 0.15 + 0.45 * (1 - Math.max(0, falta) / T.antecedenciaMs);
+      desenharBoneco(ctx, placar.poses[i].assinatura, ancora(pontos, w, h), w, naHora ? '#ffffff' : COR.fantasma, alpha, Math.max(6, w / 70));
+      if (assin && falta < 1200) {
+        const r = comparar(assin, placar.poses[i].assinatura, tol);
+        cores = Object.fromEntries(Object.entries(r.porOsso).map(([o, n]) => [o, corDaNota(n)]));
+      }
+    }
+  }
+  if (pontos) desenharEsqueleto(ctx, pontos, w, h, cores);
+
+  $('pontos').textContent = placar.pontos.toLocaleString('pt-BR');
+  $('combo').textContent = placar.combo >= 2 ? `combo ${placar.combo}${placar.multiplicador > 1 ? ` ×${String(placar.multiplicador).replace('.', ',')}` : ''}` : '';
+  const faltaPrimeira = placar.poses[0].t - agora;
+  $('contagem').textContent = faltaPrimeira > 3000 ? 'Prepare-se!' : String(Math.ceil(faltaPrimeira / 1000));
+  mostrar('contagem', faltaPrimeira > 0);
+  placar.poses.forEach((p, k) => {
+    const falta = p.t - agora;
+    const item = estado.itensFila[k];
+    const naFila = falta < T.antecedenciaMs + 500 && falta > -placar.janelaMs;
+    item.style.display = naFila ? '' : 'none';
+    if (naFila) item.style.left = `calc(${Math.max(0, falta / T.antecedenciaMs) * 85}% + 4px)`;
+  });
+  mostrar('aviso-sumiu', !pontos);
+  if (agora > rodada.duracaoMs || (placar.terminou() && agora > placar.poses.at(-1).t + 1500)) terminarJogo();
+}
+
+function mostrarFeedback({ classe, pontos }) {
+  const el = $('feedback');
+  el.className = classe.css;
+  el.innerHTML = `${escapar(classe.rotulo)}!${pontos > 0 ? `<small>+${pontos}</small>` : ''}`;
+  void el.offsetWidth;
+  el.classList.add('anima');
+}
+
+// A música escolhida no menu, no formato { url, bpm, offsetMs } (url null = batida do jogo).
+function musicaDaRodada() {
+  if (estado.musica === 'arquivo' && estado.arquivoLocal) return { url: estado.arquivoLocal.url, bpm: estado.arquivoLocal.bpm, offsetMs: 0 };
+  if (estado.musica && estado.musica !== 'arquivo') return estado.musica;
+  return { url: null, bpm: estado.danca.bpm, offsetMs: 0 };
+}
+
+async function comecarJogo() {
+  const musica = musicaDaRodada();
+  estado.rodada = montarRodada(estado.danca, musica);
+  estado.placar = new Placar(estado.rodada.poses, estado.dificuldade.janelaMs);
+  estado.relogio = musica.url ? new MusicaArquivo(musica.url) : new Batida(musica.bpm, estado.rodada.duracaoMs);
+  $('fila').querySelectorAll('canvas').forEach((c) => c.remove());
+  estado.itensFila = estado.rodada.poses.map((p) => {
+    const c = novaMiniatura(p.assinatura);
+    c.style.display = 'none';
+    $('fila').appendChild(c);
+    return c;
+  });
+  try {
+    await estado.relogio.iniciar();
+  } catch (e) {
+    alert(`Não consegui tocar a música: ${e.message}`);
+    return;
+  }
+  estado.fase = 'jogando';
+  atualizarTela();
+}
+
+function terminarJogo() {
+  estado.relogio?.parar();
+  estado.fase = 'fim';
+  atualizarTela();
+  if (R) enviarPontuacao();
+}
+
+const postar = (corpo) => fetch('/api/pontuacao', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': R.token },
+  body: JSON.stringify(corpo),
+});
+
+async function enviarPontuacao() {
+  const p = estado.placar;
+  const corpo = { nome: estado.nomeDaRodada, pontos: p.pontos, perfeitos: p.contagem[CLASSES[0].rotulo], comboMax: p.comboMax };
+  estado.envio = { status: 'enviando' };
+  atualizarTela();
+  try {
+    let r = await postar(corpo);
+    if (r.status === 419) { // a página ficou aberta muito tempo e a sessão expirou: pega um token novo
+      R.token = (await (await fetch('/api/token', { cache: 'no-store' })).json()).token;
+      r = await postar(corpo);
+    }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.erro ?? d.message ?? `erro ${r.status}`);
+    estado.envio = { status: 'ok', ...d };
+  } catch (e) {
+    estado.envio = { status: 'erro', msg: e.message };
+  }
+  atualizarTela();
+}
+
+function blocoRanking() {
+  const e = estado.envio;
+  if (!R || !e) return '';
+  if (e.status === 'enviando') return '<div class="resultado-ranking">Enviando para o ranking…</div>';
+  if (e.status === 'erro') {
+    return `<div class="resultado-ranking"><span class="erro" style="color: var(--vermelho)">Não consegui salvar no ranking: ${escapar(e.msg)}</span>
+      <button class="botao pequeno secundario" data-acao="reenviar">Tentar de novo</button></div>`;
+  }
+  const eu = estado.nomeDaRodada.trim().toLowerCase();
+  const frase = e.primeiraVez ? 'Você entrou no ranking!' : e.recorde ? '🔥 Novo recorde pessoal!' : `Seu recorde continua ${e.melhor.toLocaleString('pt-BR')} pontos.`;
+  return `<div class="resultado-ranking">
+      <div><span class="posicao">${e.posicao}º lugar</span> <span class="nota">de ${e.total}</span></div>
+      <div>${frase}</div>
+      <ol>${e.top.map((t) => `<li class="${t.nome.trim().toLowerCase() === eu ? 'eu' : ''}"><span>${t.posicao}º ${escapar(t.nome)}</span><b>${t.pontos.toLocaleString('pt-BR')}</b></li>`).join('')}</ol>
+      <a class="link" href="/ranking" target="_blank">ver o ranking completo</a>
+    </div>`;
+}
+function sairDoJogo() { estado.relogio?.parar(); estado.fase = 'menu'; atualizarTela(); }
+
+// ---------------------------------------------------------------------------------------
+// Missões na tela
+// ---------------------------------------------------------------------------------------
+const cartoes = {};
+
+function montarMissoes() {
+  if (!MISSOES.length) {
+    $('lista-missoes').innerHTML = '<p class="nota">Nenhuma missão ativa. O jogo já está liberado (cadastre missões no painel /admin).</p>';
+    return;
+  }
+  for (const m of MISSOES) {
+    const exp = experimento(m);
+    const el = document.createElement('details');
+    el.className = 'missao';
+    el.innerHTML = `
+      <summary><span class="icone">🔒</span> ${m.n}. ${escapar(m.titulo)}</summary>
+      ${m.conceito ? `<p>${escapar(m.conceito)}</p>` : ''}
+      ${m.desafio ? `<div class="desafio">🎯 <b>Desafio:</b> ${escapar(m.desafio)}</div>` : ''}
+      <div class="controles">${exp ? exp.controles(m, dadosDe(m)) : `<p class="status erro">Tipo de experimento desconhecido: ${escapar(m.tipo)}</p>`}</div>
+      <div class="status"></div>
+      <div class="barra-segurar escondido"><div></div></div>
+      ${m.codigo ? `<details class="codigo"><summary>👀 Ver como é feito</summary><pre><code>${escapar(m.codigo)}</code></pre></details>` : ''}
+      ${C.site.liberarTudo ? '<div class="linha" style="margin-top: 8px"><button class="link" data-acao="pular">pular esta missão</button></div>' : ''}`;
+
+    el.addEventListener('toggle', () => {
+      if (el.open) {
+        for (const outro of Object.values(cartoes)) if (outro.el !== el) outro.el.open = false;
+        abrirExperimento(m);
+      } else if (estado.atual === m) {
+        estado.atual = null;
+        atualizarTela();
+      }
+    });
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.acao === 'concluir' || b.dataset.acao === 'pular') concluir(m);
+      if (b.dataset.modoCor) {
+        dadosDe(m).modo = b.dataset.modoCor;
+        el.querySelectorAll('[data-modo-cor]').forEach((x) => x.classList.toggle('ativa', x === b));
+      }
+    });
+    el.addEventListener('input', (e) => {
+      const ctl = e.target.dataset.ctl;
+      if (!ctl) return;
+      dadosDe(m)[ctl] = Number(e.target.value);
+      const rotulo = el.querySelector(`[data-valor="${ctl}"]`);
+      if (rotulo) rotulo.textContent = ctl === 'colunas' ? `${e.target.value} colunas` : ctl === 'tolerancia' ? `${e.target.value}°` : e.target.value;
+    });
+    $('lista-missoes').appendChild(el);
+    cartoes[m.id] = { el, status: el.querySelector('.status'), barra: el.querySelector('.barra-segurar div') };
+  }
+}
+
+function abrirExperimento(m) {
+  estado.atual = m;
+  const x = dadosDe(m);
+  delete x.desde; delete x.toque; // recomeça o "segurar" e o toque, mas mantém os controles
+  if (!feita(m) && x.etapa !== undefined) x.etapa = 0;
+  if (x.tempo && !feita(m)) x.tempo = {};
+  ultimoStatus = 0;
+  atualizarTela();
+}
+
+function concluir(m) {
+  if (feita(m)) return;
+  feitas.add(m.id);
+  localStorage.setItem(chave(m), '1');
+  comemorar(`🎉 Missão ${m.n} completa${m.destrava ? `: ${m.destrava}` : ''}`);
+  cartoes[m.id].el.querySelector('[data-acao="concluir"]')?.setAttribute('disabled', '');
+  atualizarTela();
+  // depois de comemorar, abre a próxima que falta
+  setTimeout(() => {
+    const proxima = MISSOES.find((x) => !feita(x));
+    if (proxima && estado.atual === m) {
+      cartoes[proxima.id].el.open = true;
+      cartoes[proxima.id].el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, 2200);
+}
+
+async function ligarCamera(deviceId = localStorage.getItem('jdp:camera')) {
+  estado.abrindoCamera = true; estado.erroCamera = null;
+  atualizarTela();
+  try {
+    try {
+      await abrirCamera(video, deviceId);
+    } catch (e) {
+      if (!deviceId || e.name === 'NotAllowedError') throw e;
+      localStorage.removeItem('jdp:camera'); // a câmera salva sumiu: volta para a frontal
+      await abrirCamera(video);
+    }
+  } catch (e) {
+    estado.erroCamera = e.name === 'NotAllowedError' ? 'A permissão da câmera foi negada. Clique no cadeado ao lado do endereço do site, libere a <b>Câmera</b> e tente de novo.'
+      : e.name === 'NotReadableError' ? 'A câmera está sendo usada por outro programa (Meet, Zoom, Teams, outra aba?). Feche e tente de novo.'
+      : e.name === 'NotFoundError' ? 'Não achei nenhuma câmera neste aparelho.'
+      : escapar(e.message);
+  }
+  estado.abrindoCamera = false;
+  atualizarTela();
+}
+
+async function ligarModelo() {
+  if (estado.detector || estado.carregandoModelo) return;
+  estado.carregandoModelo = true;
+  atualizarAvisoPalco();
+  try {
+    estado.detector = await carregarDetector();
+    estado.erroModelo = null;
+  } catch (e) {
+    estado.erroModelo = `Não consegui carregar o modelo de pose (precisa de internet).<br><small>${escapar(e.message)}</small>`;
+  }
+  estado.carregandoModelo = false;
+  atualizarTela();
+}
+
+// ---------------------------------------------------------------------------------------
+// Painéis
+// ---------------------------------------------------------------------------------------
+// só refaz o HTML do painel quando ele muda (assim o campo de nome não perde o foco enquanto a pessoa digita)
+function renderizar(el, html, depois) {
+  if (el.dataset.html === html) return;
+  const focado = document.activeElement?.id === 'input-nome' ? $('input-nome').selectionStart : null;
+  el.dataset.html = html;
+  el.innerHTML = html;
+  depois?.();
+  if ($('input-nome')) {
+    $('input-nome').value = estado.nome;
+    if (focado !== null) { $('input-nome').focus(); $('input-nome').setSelectionRange(focado, focado); }
+  }
+}
+
+function painelJogo() {
+  const el = $('painel-jogo');
+  const faltando = jogoLiberado() ? [] : MISSOES.filter((m) => !feita(m));
+
+  if (!DANCAS.length) {
+    return renderizar(el, '<h2>⚙️ Nenhuma dança</h2><p>Cadastre uma dança com poses no painel <b>/admin</b>.</p>');
+  }
+  if (faltando.length) {
+    return renderizar(el, `<h2>🔒 O jogo ainda está trancado</h2>
+      <p>Faltam ${faltando.length === 1 ? 'a missão' : 'as missões'} ${faltando.map((m) => m.n).join(', ')} na aba <b>Aula</b>.</p>
+      <button class="botao" data-ir="aula">Ir para a Aula</button>
+      ${C.site.liberarTudo ? '<button class="link" data-acao="liberar">liberar o jogo sem fazer as missões</button>' : ''}`);
+  }
+
+  if (estado.fase === 'fim') {
+    const p = estado.placar;
+    const bons = (p.contagem[CLASSES[0].rotulo] + (CLASSES.length > 2 ? p.contagem[CLASSES[1].rotulo] : 0)) / p.poses.length;
+    const titulo = bons > 0.8 ? 'Lenda da pista!' : bons > 0.5 ? 'Mandou bem!' : bons > 0.25 ? 'Tá pegando o jeito' : 'O importante é se divertir 😅';
+    return renderizar(el, `<h2>${R ? `${escapar(estado.nomeDaRodada)}, ` : ''}${titulo}</h2>
+      <div class="placar-final">${p.pontos.toLocaleString('pt-BR')} pontos</div>
+      ${blocoRanking()}
+      <div class="classes">
+        ${CLASSES.map((c) => `<div class="${c.css}"><b>${p.contagem[c.rotulo]}</b><span>${escapar(c.rotulo)}</span></div>`).join('')}
+        <div><b>${p.comboMax}</b><span>maior combo</span></div>
+      </div>
+      <button class="botao grande" data-acao="comecar">Jogar de novo</button>
+      <button class="botao secundario" data-acao="menu">${R ? 'Trocar de pessoa' : 'Trocar a dança ou a música'}</button>`);
+  }
+
+  const campoNome = R ? `
+    <label class="campo-nome" id="campo-nome"><span>Seu nome</span>
+      <input id="input-nome" maxlength="20" autocomplete="nickname" enterkeyhint="go" placeholder="Como você quer aparecer no ranking" /></label>` : '';
+  const botaoComecar = `<button class="botao grande" data-acao="comecar" ${podeComecar() ? '' : 'disabled'}>${estado.erroCamera ? 'Libere a câmera' : estado.detector ? 'Começar!' : 'Esperando o modelo…'}</button>`;
+
+  if (COMP) {
+    const m = COMP.musica;
+    return renderizar(el, `
+      <h2>Dança da competição</h2>
+      <div class="opcao ativa" id="danca-comp"><span><b>${escapar(COMP.danca.nome)}</b>
+        <small>${COMP.danca.passos.length} poses · ${escapar(COMP.dificuldade.nome)} · 🎵 ${escapar(m ? m.nome : 'Batida do jogo')}</small></span></div>
+      ${campoNome}
+      ${botaoComecar}
+      <p class="nota">${duracaoTexto()} · afaste-se até a câmera ver você da cintura para cima.${R ? ' Seu melhor resultado entra no ranking.' : ''}</p>`,
+    () => $('danca-comp').prepend(novaMiniatura(POSES.get(COMP.danca.passos[0].poseId).assinatura, 44)));
+  }
+
+  const selecionada = estado.musica === 'arquivo' ? 'arquivo' : estado.musica ? `m${estado.musica.id}` : 'batida';
+  const opcaoMusica = (valor, titulo, sub) =>
+    `<button class="opcao ${selecionada === valor ? 'ativa' : ''}" data-musica="${valor}"><span class="icone-musica">🎵</span><span><b>${escapar(titulo)}</b><small>${escapar(sub)}</small></span></button>`;
+
+  renderizar(el, `
+    ${campoNome}
+    <h2>Escolha a dança</h2><div id="lista-dancas" class="lista"></div>
+    <h2>Escolha a música</h2>
+    <div class="lista">
+      ${opcaoMusica('batida', 'Batida do jogo', `sintetizada · ${estado.danca.bpm} bpm`)}
+      ${MUSICAS.map((m) => opcaoMusica(`m${m.id}`, m.nome, [m.artista, `${m.bpm} bpm`].filter(Boolean).join(' · '))).join('')}
+      ${opcaoMusica('arquivo', estado.arquivoLocal ? estado.arquivoLocal.nome : 'Arquivo do meu computador…', estado.arquivoLocal ? `${estado.arquivoLocal.bpm} bpm` : 'mp3, ogg, wav…')}
+    </div>
+    <div id="config-arquivo" class="linha ${selecionada === 'arquivo' ? '' : 'escondido'}">
+      <label class="botao pequeno secundario" style="position: relative">Escolher arquivo
+        <input id="input-arquivo" type="file" accept="audio/*" style="position: absolute; inset: 0; opacity: 0; cursor: pointer" /></label>
+      <label class="linha">BPM <input id="input-bpm" type="number" min="40" max="220" value="${estado.arquivoLocal?.bpm ?? 120}" style="width: 72px" /></label>
+    </div>
+    <h2>Dificuldade</h2>
+    <div class="linha">${DIFICULDADES.map((d, i) =>
+      `<button class="botao pequeno ${d === estado.dificuldade ? '' : 'secundario'}" data-dificuldade="${i}">${escapar(d.nome)}</button>`).join('')}</div>
+    ${botaoComecar}
+    <p class="nota">${duracaoTexto()} · afaste-se até a câmera ver você da cintura para cima.</p>`, () => DANCAS.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.className = `opcao ${d === estado.danca ? 'ativa' : ''}`;
+    b.dataset.danca = i;
+    const primeira = POSES.get(d.passos[0].poseId);
+    b.append(novaMiniatura(primeira.assinatura, 44));
+    b.insertAdjacentHTML('beforeend', `<span><b>${escapar(d.nome)}</b><small>${d.passos.length} poses</small></span>`);
+    $('lista-dancas').appendChild(b);
+  }));
+}
+
+const podeComecar = () => estado.detector && !estado.erroCamera && !(estado.musica === 'arquivo' && !estado.arquivoLocal);
+const duracaoTexto = () => {
+  if (estado.musica === 'arquivo' && !estado.arquivoLocal) return 'escolha um arquivo de música';
+  return `${Math.round(montarRodada(estado.danca, musicaDaRodada()).duracaoMs / 1000)} s`;
+};
+
+function atualizarMissoes() {
+  for (const m of MISSOES) {
+    const { el } = cartoes[m.id];
+    el.classList.toggle('ok', feita(m));
+    el.querySelector('.icone').textContent = feita(m) ? '✅' : m === estado.atual ? '🔬' : '🔒';
+  }
+}
+
+function atualizarTela() {
+  const jogando = estado.modo === 'jogo' && estado.fase === 'jogando';
+  document.querySelectorAll('.abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.modo === estado.modo));
+  $('main').classList.toggle('tela-cheia', jogando);
+  $('main').classList.toggle('modo-aula', estado.modo === 'aula');
+  mostrar('painel-jogo', estado.modo === 'jogo' && !jogando);
+  mostrar('painel-aula', estado.modo === 'aula');
+  for (const id of ['hud-jogo', 'fila', 'btn-sair']) mostrar(id, jogando);
+  if (!jogando) for (const id of ['contagem', 'aviso-sumiu']) mostrar(id, false);
+  mostrar('hud-aula', estado.modo === 'aula' && !!estado.atual);
+  $('palco').classList.toggle('tocavel', estado.modo === 'aula' && !!experimento(estado.atual)?.toque);
+  mostrar('btn-camera', !jogando);
+  if (jogando) mostrar('painel-camera', false);
+  $('progresso').textContent = MISSOES.length ? `Missões: ${MISSOES.filter(feita).length} de ${MISSOES.length}` : '';
+  atualizarAvisoPalco();
+  atualizarMissoes();
+  if (estado.modo === 'jogo') painelJogo();
+}
+
+// ---------------------------------------------------------------------------------------
+// Botões
+// ---------------------------------------------------------------------------------------
+function trocarModo(modo) {
+  if (estado.fase === 'jogando') sairDoJogo();
+  estado.modo = modo;
+  atualizarTela();
+}
+document.querySelectorAll('.abas button').forEach((b) => b.addEventListener('click', () => trocarModo(b.dataset.modo)));
+
+// tocar no vídeo (missão de pixels): guarda o ponto na imagem original (desfaz o espelho)
+$('palco').addEventListener('pointerdown', (e) => {
+  if (estado.modo !== 'aula' || !experimento(estado.atual)?.toque || e.target.closest('button')) return;
+  const r = canvas.getBoundingClientRect();
+  dadosDe(estado.atual).toque = { u: 1 - (e.clientX - r.left) / r.width, v: (e.clientY - r.top) / r.height };
+});
+$('aviso-palco').addEventListener('click', (e) => { if (e.target.closest('[data-acao="camera"]')) ligarCamera(); });
+
+$('painel-jogo').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.ir) return trocarModo(b.dataset.ir);
+  if (b.dataset.acao === 'liberar') {
+    for (const m of MISSOES) { feitas.add(m.id); localStorage.setItem(chave(m), '1'); }
+    return atualizarTela();
+  }
+  if (b.dataset.danca) {
+    estado.danca = DANCAS[b.dataset.danca];
+    if (estado.musica !== 'arquivo') estado.musica = musicaSugerida(estado.danca);
+  }
+  if (b.dataset.musica) {
+    const v = b.dataset.musica;
+    estado.musica = v === 'batida' ? null : v === 'arquivo' ? 'arquivo' : MUSICAS.find((m) => `m${m.id}` === v);
+  }
+  if (b.dataset.dificuldade) estado.dificuldade = DIFICULDADES[b.dataset.dificuldade];
+  if (b.dataset.acao === 'comecar') {
+    if (R && !estado.nome.trim()) {
+      $('campo-nome')?.classList.remove('faltando'); void $('campo-nome')?.offsetWidth;
+      $('campo-nome')?.classList.add('faltando');
+      return $('input-nome')?.focus();
+    }
+    estado.nomeDaRodada = estado.nome.trim();
+    estado.envio = null;
+    return void comecarJogo();
+  }
+  if (b.dataset.acao === 'reenviar') return void enviarPontuacao();
+  if (b.dataset.acao === 'menu') {
+    estado.fase = 'menu';
+    if (R) { estado.nome = ''; localStorage.removeItem('jdp:nome'); } // próxima pessoa
+  }
+  atualizarTela();
+});
+
+$('painel-jogo').addEventListener('input', (e) => {
+  if (e.target.id !== 'input-nome') return;
+  estado.nome = e.target.value.slice(0, 20);
+  localStorage.setItem('jdp:nome', estado.nome);
+  $('campo-nome').classList.remove('faltando');
+});
+$('painel-jogo').addEventListener('keydown', (e) => {
+  if (e.target.id === 'input-nome' && e.key === 'Enter') $('painel-jogo').querySelector('[data-acao="comecar"]')?.click();
+});
+
+$('painel-jogo').addEventListener('change', (e) => {
+  if (e.target.id === 'input-arquivo' && e.target.files[0]) {
+    const f = e.target.files[0];
+    estado.arquivoLocal = { url: URL.createObjectURL(f), nome: f.name.replace(/\.[^.]+$/, ''), bpm: Number($('input-bpm').value) || 120 };
+    atualizarTela();
+  }
+  if (e.target.id === 'input-bpm' && estado.arquivoLocal) {
+    estado.arquivoLocal.bpm = Math.min(220, Math.max(40, Number(e.target.value) || 120));
+    atualizarTela();
+  }
+});
+
+window.addEventListener('hashchange', () => { if (location.hash === '#jogar' && jogoLiberado()) trocarModo('jogo'); });
+$('btn-sair').addEventListener('click', sairDoJogo);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && estado.fase === 'jogando') sairDoJogo(); });
+
+$('btn-recomecar').addEventListener('click', () => {
+  if (!confirm('Marcar todas as missões como não feitas e começar do zero?')) return;
+  MISSOES.forEach((m) => localStorage.removeItem(chave(m)));
+  location.reload();
+});
+
+// 📷: escolher câmera (a traseira ultra-angular é o "0,5×" em muitos celulares) e o zoom
+const nomeCamera = (d, i) => {
+  const nome = d.label || `Câmera ${i + 1}`;
+  return /ultra|0[.,]5/i.test(nome) ? `${nome} (0,5×)` : nome;
+};
+async function montarPainelCamera() {
+  const track = streamAtual?.getVideoTracks()[0];
+  const atual = track?.getSettings().deviceId;
+  const cameras = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+  $('sel-camera').innerHTML = cameras.map((d, i) => `<option value="${escapar(d.deviceId)}" ${d.deviceId === atual ? 'selected' : ''}>${escapar(nomeCamera(d, i))}</option>`).join('');
+  const zoom = track?.getCapabilities?.().zoom;
+  mostrar('bloco-zoom', !!zoom);
+  if (zoom) {
+    Object.assign($('zoom'), { min: zoom.min, max: Math.min(zoom.max, zoom.min + 4), step: zoom.step || 0.1, value: track.getSettings().zoom ?? zoom.min });
+    $('txt-zoom').textContent = `${String(Number($('zoom').value).toFixed(1)).replace('.', ',')}×`;
+  }
+  $('dica-camera').textContent = zoom ? '' : cameras.length > 1
+    ? 'Esta câmera não tem zoom pelo navegador. Se aparecer uma "ultra-angular", ela é a de 0,5×.'
+    : 'Só achei uma câmera e ela não tem zoom pelo navegador. Afaste mais o aparelho.';
+}
+$('btn-camera').addEventListener('click', async () => {
+  const abrir = $('painel-camera').classList.contains('escondido');
+  mostrar('painel-camera', abrir);
+  if (abrir) await montarPainelCamera();
+});
+$('sel-camera').addEventListener('change', async (e) => {
+  localStorage.setItem('jdp:camera', e.target.value);
+  await ligarCamera(e.target.value);
+  await montarPainelCamera();
+});
+$('zoom').addEventListener('input', async (e) => {
+  $('txt-zoom').textContent = `${Number(e.target.value).toFixed(1).replace('.', ',')}×`;
+  try { await streamAtual?.getVideoTracks()[0].applyConstraints({ advanced: [{ zoom: Number(e.target.value) }] }); } catch { /* sem zoom */ }
+});
+
+$('btn-qr').addEventListener('click', () => {
+  // o QR abre na aba Aula (missões)
+  const link = location.href.split('#')[0];
+  $('img-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=10&data=${encodeURIComponent(link)}`;
+  $('txt-link').textContent = link;
+  mostrar('modal-qr', true);
+});
+$('fechar-qr').addEventListener('click', () => mostrar('modal-qr', false));
+$('modal-qr').addEventListener('click', (e) => { if (e.target.id === 'modal-qr') mostrar('modal-qr', false); });
+
+// ---------------------------------------------------------------------------------------
+// Começo: abre a câmera e o modelo logo de cara, e a primeira missão que falta
+// ---------------------------------------------------------------------------------------
+function iniciar() {
+  document.title = C.site.titulo;
+  $('logo').innerHTML = escapar(C.site.titulo).replace(/^(.*\s)?(\S+)$/, (_, a, b) => (a ? `${a}<span>${b}</span>` : b)); // última palavra em rosa
+  $('boas-vindas').textContent = C.site.boasVindas;
+  montarMissoes();
+  mostrar('link-ranking', !!R);
+  const primeira = MISSOES.find((m) => !feita(m));
+  if (location.hash === '#jogar' && jogoLiberado()) estado.modo = 'jogo'; // link do QR code
+  else if (primeira) cartoes[primeira.id].el.open = true; // dispara o "toggle" e põe o experimento no palco
+  else if (MISSOES.length) estado.modo = 'jogo';
+  atualizarTela();
+  ligarCamera();
+  ligarModelo();
+  requestAnimationFrame(loop);
+}
+
+iniciar();
+</script>
+</body>
+</html>
