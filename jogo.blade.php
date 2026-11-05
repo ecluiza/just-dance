@@ -1,0 +1,1066 @@
+{{-- Página do jogo. Toda a configuração vem do painel /admin (App\Support\ConfigDoJogo). --}}
+@verbatim
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+@endverbatim
+<title>{{ $config['site']['titulo'] }}</title>
+@verbatim
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕺</text></svg>" />
+<style>
+  :root {
+    --fundo: #0d0b1a; --cartao: #17142b; --cartao-2: #221d3d; --borda: #342d5c;
+    --texto: #f4f1ff; --texto-2: #a9a2cc;
+    --rosa: #ff3ea5; --ciano: #2de2e6; --amarelo: #ffd319; --verde: #3cff8f; --vermelho: #ff3e6c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--texto); line-height: 1.45;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(255, 62, 165, .18), transparent 60%), var(--fundo);
+  }
+  h2 { margin: 0; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .85em; background: var(--cartao-2); padding: 2px 6px; border-radius: 6px; color: var(--amarelo); }
+  .nota { color: var(--texto-2); font-size: .9rem; margin: 0; }
+  .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .escondido { display: none !important; }
+
+  /* topo */
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+  .logo { font-weight: 900; font-size: 1.3rem; }
+  .logo span { color: var(--rosa); }
+  .abas button { background: none; border: 0; color: var(--texto-2); font: inherit; font-weight: 700; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+  .abas button.ativa { background: var(--ciano); color: var(--fundo); }
+  .direita { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+  #progresso { color: var(--texto-2); font-size: .9rem; }
+
+  /* layout */
+  main { display: grid; grid-template-columns: 1fr 380px; gap: 18px; padding: 18px; max-width: 1600px; margin: 0 auto; align-items: start; }
+  main.modo-aula { grid-template-columns: 1fr 520px; }
+  main.tela-cheia { grid-template-columns: 1fr; }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .botao { background: var(--rosa); color: #fff; border: 0; border-radius: 999px; padding: 10px 20px; font: inherit; font-weight: 800; cursor: pointer; }
+  .botao:disabled { opacity: .5; cursor: not-allowed; }
+  .botao.secundario { background: var(--cartao-2); border: 1px solid var(--borda); }
+  .botao.grande { font-size: 1.15rem; padding: 14px 28px; }
+  .botao.pequeno { padding: 6px 12px; font-size: .88rem; }
+  .link { background: none; border: 0; color: var(--texto-2); font: inherit; font-size: .85rem; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  /* palco: vídeo + desenho */
+  #palco { position: relative; margin: 0 auto; width: min(100%, calc((100vh - 110px) * 4 / 3)); aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #000; border: 1px solid var(--borda); }
+  #video, #canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #video { transform: scaleX(-1); object-fit: cover; } /* espelho só na tela; as contas usam a imagem original */
+  .aviso-palco { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; background: rgba(13, 11, 26, .88); font-size: 1.1rem; }
+  .aviso-palco.erro { color: var(--vermelho); }
+  .cadeado { font-size: 3rem; }
+  #comemoracao { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(13, 11, 26, .9); border: 2px solid var(--verde); border-radius: 16px; padding: 16px 24px; text-align: center; font-weight: 800; font-size: 1.3rem; opacity: 0; pointer-events: none; }
+  #comemoracao.anima { animation: comemora 2.6s ease-out forwards; }
+  @keyframes comemora { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6) } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) } 20% { transform: translate(-50%, -50%) scale(1) } 80% { opacity: 1 } 100% { opacity: 0 } }
+
+  /* HUD do jogo */
+  #hud-jogo { position: absolute; top: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; font-weight: 900; text-shadow: 0 2px 12px rgba(0, 0, 0, .8); }
+  #pontos { font-size: clamp(1.6rem, 4vw, 3rem); }
+  #combo { font-size: clamp(1rem, 2.4vw, 1.8rem); color: var(--amarelo); }
+  #feedback { position: absolute; top: 22%; left: 0; right: 0; text-align: center; pointer-events: none; opacity: 0;
+    font-size: clamp(2.2rem, 8vw, 5.5rem); font-weight: 900; font-style: italic; text-shadow: 0 0 30px currentColor, 0 4px 0 rgba(0, 0, 0, .5); }
+  #feedback small { display: block; font-size: .4em; font-style: normal; color: #fff; }
+  #feedback.anima { animation: estouro .9s ease-out forwards; }
+  @keyframes estouro { 0% { transform: scale(.4); opacity: 0 } 15% { transform: scale(1.15); opacity: 1 } 30% { transform: scale(1) } 100% { transform: translateY(-30px); opacity: 0 } }
+  .perfeito { color: var(--verde); } .otimo { color: var(--ciano); } .bom { color: var(--amarelo); } .errou { color: var(--vermelho); }
+  #contagem { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-size: clamp(3rem, 14vw, 9rem); font-weight: 900; color: var(--amarelo); }
+  #fila { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 88px; background: rgba(0, 0, 0, .5); border-radius: 14px; overflow: hidden; }
+  #fila .alvo { position: absolute; left: 4px; top: 6px; bottom: 6px; width: 72px; border: 3px solid var(--rosa); border-radius: 12px; box-shadow: 0 0 18px var(--rosa); }
+  #fila canvas { position: absolute; top: 12px; }
+  #aviso-sumiu { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); background: rgba(255, 62, 108, .9); padding: 8px 16px; border-radius: 999px; font-weight: 800; }
+  #btn-sair { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); opacity: .7; }
+  canvas.mini { background: var(--cartao-2); border-radius: 10px; flex-shrink: 0; }
+
+  /* HUD da aula */
+  #hud-aula { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 4px; }
+  #hud-aula span { background: rgba(0, 0, 0, .6); padding: 4px 12px; border-radius: 999px; font-weight: 800; font-size: clamp(1rem, 2.4vw, 1.6rem); width: fit-content; }
+  #rotulo-pose { color: var(--ciano); }
+  #medidores { position: absolute; right: 12px; top: 12px; display: flex; gap: 10px; }
+  .medidor { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(0, 0, 0, .55); padding: 8px; border-radius: 10px; font-weight: 800; }
+  .trilho { width: 18px; height: 110px; background: var(--cartao-2); border-radius: 999px; overflow: hidden; display: flex; align-items: flex-end; }
+  .trilho div { width: 100%; background: linear-gradient(0deg, var(--rosa), var(--amarelo)); }
+  .medidor small { color: var(--texto-2); font-size: .7rem; font-weight: 400; }
+
+  /* painel do jogo */
+  .opcao { display: flex; gap: 12px; align-items: center; text-align: left; background: var(--cartao-2); border: 2px solid transparent; border-radius: 12px; padding: 6px 10px; color: var(--texto); font: inherit; cursor: pointer; }
+  .opcao small { display: block; color: var(--texto-2); }
+  .opcao.ativa { border-color: var(--rosa); }
+  .placar-final { font-size: 2.6rem; font-weight: 900; color: var(--amarelo); }
+  .classes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .classes div { background: var(--cartao-2); border-radius: 10px; padding: 8px; text-align: center; }
+  .classes b { display: block; font-size: 1.6rem; }
+  .classes span { font-size: .8rem; color: var(--texto-2); }
+
+  /* painel da aula: missões com editor */
+  details.missao { background: var(--cartao-2); border: 1px solid var(--borda); border-radius: 12px; padding: 10px 14px; }
+  details.missao.ok { border-color: rgba(60, 255, 143, .6); }
+  details.missao summary { cursor: pointer; font-weight: 800; font-size: 1.05rem; }
+  details.missao p { margin: 8px 0; font-size: .92rem; }
+  .editor {
+    width: 100%; min-height: 240px; resize: vertical; margin-top: 8px;
+    background: #0a0816; color: #e8e4ff; border: 1px solid var(--borda); border-radius: 10px; padding: 12px;
+    font: 13px/1.5 ui-monospace, Consolas, 'Cascadia Code', monospace; tab-size: 2; white-space: pre;
+  }
+  .editor:focus { outline: 2px solid var(--ciano); }
+  .saida { font-size: .88rem; margin-top: 8px; }
+  .saida ul { list-style: none; padding: 0; margin: 6px 0 0; }
+  .saida .ok { color: var(--verde); } .saida .falhou { color: var(--vermelho); }
+  .saida .erro { color: var(--vermelho); font-family: ui-monospace, Consolas, monospace; font-size: .85rem; white-space: pre-wrap; }
+  .slider { display: flex; flex-direction: column; gap: 2px; }
+  .slider b { color: var(--ciano); }
+  .slider input { accent-color: var(--rosa); }
+
+  /* QR code */
+  #modal-qr { position: fixed; inset: 0; background: rgba(0, 0, 0, .8); display: grid; place-items: center; z-index: 10; }
+  #modal-qr .cartao { align-items: center; text-align: center; max-width: 92vw; }
+  #modal-qr img { width: min(70vmin, 420px); height: auto; background: #fff; border-radius: 12px; padding: 12px; }
+  #modal-qr code { font-size: 1.1rem; word-break: break-all; }
+
+  @media (min-width: 1001px) { #palco { position: sticky; top: 12px; } } /* o vídeo fica na tela enquanto rola as missões */
+  .lista { display: flex; flex-direction: column; gap: 8px; }
+  .icone-musica { width: 44px; height: 44px; display: grid; place-items: center; font-size: 1.4rem; background: var(--cartao-2); border-radius: 10px; flex-shrink: 0; }
+  #painel-jogo h2 { font-size: 1.1rem; margin-top: 4px; }
+  #input-bpm { background: #0a0816; color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; padding: 4px 6px; font: inherit; }
+  @media (max-width: 1000px) { main, main.modo-aula { grid-template-columns: 1fr; padding: 10px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" id="logo">Just Dance <span>de Pobre</span></div>
+  <nav class="abas">
+    <button data-modo="aula">Aula</button>
+    <button data-modo="jogo">Jogar</button>
+  </nav>
+  <div class="direita">
+    <span id="progresso"></span>
+    <button id="btn-qr" class="botao pequeno secundario">📱 Link para a sala</button>
+  </div>
+</header>
+
+<main id="main">
+  <!-- PALCO: vídeo da câmera com os desenhos por cima -->
+  <div id="palco">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <div id="hud-jogo" class="escondido"><div id="pontos">0</div><div id="combo"></div></div>
+    <div id="feedback"></div>
+    <div id="contagem" class="escondido"></div>
+    <div id="fila" class="escondido"><div class="alvo"></div></div>
+    <div id="aviso-sumiu" class="escondido">Cadê você? Fique de frente para a câmera</div>
+    <button id="btn-sair" class="botao pequeno escondido">Sair (Esc)</button>
+
+    <div id="hud-aula" class="escondido"><span id="rotulo-pose"></span><span id="nota-ao-vivo"></span></div>
+    <div id="medidores" class="escondido">
+      <div class="medidor"><div class="trilho"><div id="barra-e"></div></div><span id="valor-e">—</span><small>Braço esq.</small></div>
+      <div class="medidor"><div class="trilho"><div id="barra-d"></div></div><span id="valor-d">—</span><small>Braço dir.</small></div>
+    </div>
+
+    <div id="aviso-palco" class="aviso-palco escondido"></div>
+    <div id="comemoracao"></div>
+  </div>
+
+  <!-- PAINEL DA AULA: as missões são escritas aqui mesmo, na tela -->
+  <aside id="painel-aula" class="cartao">
+    <div class="linha" style="justify-content: space-between">
+      <h2>Missões</h2>
+      <button id="btn-recomecar" class="link">recomeçar do zero</button>
+    </div>
+    <p class="nota" id="boas-vindas"></p>
+    <div id="lista-missoes" style="display: flex; flex-direction: column; gap: 10px"></div>
+
+    <div id="ajustes" class="cartao escondido" style="background: var(--cartao-2)">
+      <div id="treino" class="linha">
+        <b>Pose de treino:</b>
+        <button id="pose-anterior" class="botao pequeno">◀</button>
+        <canvas id="mini-treino" class="mini" width="96" height="96" style="width: 48px; height: 48px"></canvas>
+        <button id="pose-proxima" class="botao pequeno">▶</button>
+      </div>
+      <label class="slider">
+        <span>Tolerância <b id="txt-tolerancia">45°</b></span>
+        <input id="tolerancia" type="range" min="10" max="90" step="5" value="45" />
+        <small class="nota">Quanto cada osso pode errar antes de a nota zerar.</small>
+      </label>
+      <label class="slider">
+        <span>Suavização <b id="txt-suavizacao">0,5</b></span>
+        <input id="suavizacao" type="range" min="0" max="0.9" step="0.1" value="0.5" />
+        <small class="nota">Mais suave = esqueleto treme menos, mas atrasa.</small>
+      </label>
+      <label class="linha"><input id="mostrar-angulos" type="checkbox" /> Mostrar os ângulos dos ossos</label>
+    </div>
+  </aside>
+
+  <!-- PAINEL DO JOGO -->
+  <aside id="painel-jogo" class="cartao escondido"></aside>
+</main>
+
+<div id="modal-qr" class="escondido">
+  <div class="cartao">
+    <h2>Entre pelo celular</h2>
+    <img id="img-qr" alt="QR code do link" />
+    <code id="txt-link"></code>
+    <button class="botao" id="fechar-qr">Fechar</button>
+  </div>
+</div>
+
+@endverbatim
+<script>window.JDP = @json($config);</script>
+<script type="module">
+@verbatim
+// =======================================================================================
+// Just Dance de Pobre — tudo o que aparece aqui vem do painel /admin (window.JDP).
+// =======================================================================================
+const C = window.JDP;
+const $ = (id) => document.getElementById(id);
+
+// ---------------------------------------------------------------------------------------
+// Missões: quantas o painel tiver, na ordem do painel.
+// Cada missão define funções (exporta). O jogo usa estas quatro, venham de qual missão vierem:
+//   abrirCamera · encontrarCorpo · direcao · comparar
+// ---------------------------------------------------------------------------------------
+const MISSOES = C.missoes.map((m, i) => ({ ...m, n: i + 1 }));
+const resultadoMissao = {};          // id -> funções da missão que passou
+let F = {};                          // todas as funções das missões que passaram (o jogo chama daqui)
+const feita = (m) => !!resultadoMissao[m.id];
+const tem = (nome) => typeof F[nome] === 'function';
+const missaoQueDefine = (nome) => MISSOES.find((m) => m.exporta.includes(nome));
+
+function recalcularFuncoes() {
+  F = {};
+  for (const m of MISSOES) if (resultadoMissao[m.id]) Object.assign(F, resultadoMissao[m.id]);
+}
+
+// Junta o código das missões anteriores que já passaram (assim uma missão pode usar funções de outra).
+function compilar(m, codigo) {
+  const anteriores = MISSOES.filter((x) => x.n < m.n && feita(x)).map((x) => cartoes[x.id].editor.value).join('\n\n');
+  const nomes = m.exporta.join(', ');
+  return new Function(`"use strict";\n${anteriores}\n\n${codigo}\nreturn { ${nomes} };`)();
+}
+
+// Testes escritos no painel: uma linha = expressão; várias linhas = corpo com return.
+const perto = (a, b) => typeof a === 'number' && Math.abs(a - b) < 0.01;
+const pt = (x, y) => ({ x, y, z: 0, visibility: 1 });
+function montarTeste(expressao) {
+  try {
+    return new Function('f', 'perto', 'pt', `"use strict"; return (${expressao});`);
+  } catch {
+    return new Function('f', 'perto', 'pt', `"use strict";\n${expressao}`);
+  }
+}
+
+// ---------------------------------------------------------------------------------------
+// Dados do jogo
+// ---------------------------------------------------------------------------------------
+const T = C.tecnico;
+const OSSOS = { bracoE: [11, 13], antebracoE: [13, 15], bracoD: [12, 14], antebracoD: [14, 16] };
+const LISTA_OSSOS = Object.keys(OSSOS);
+const COR = { perfeito: '#3cff8f', bom: '#ffd319', ruim: '#ff3e6c', neutro: '#ffffff', fantasma: '#2de2e6' };
+
+const CLASSES = C.pontuacao.classes; // da melhor para a pior
+const classificar = (nota) => CLASSES.find((c) => nota >= c.minimo) ?? CLASSES.at(-1);
+const corDaNota = (n) => {
+  if (n === undefined) return COR.neutro;
+  if (n >= CLASSES[0].minimo) return COR.perfeito;
+  if (n >= CLASSES[CLASSES.length - 2]?.minimo) return COR.bom;
+  return COR.ruim;
+};
+
+const POSES = new Map(C.poses.map((p) => [p.id, p]));
+const BIBLIOTECA = C.poses;
+const DIFICULDADES = C.dificuldades;
+const DANCAS = C.dancas;
+const MUSICAS = C.musicas;
+
+// Linha do tempo de uma dança tocada com uma música (BPM + atraso da 1ª batida).
+function montarRodada(danca, musica) {
+  const batidaMs = 60000 / musica.bpm;
+  let batidas = danca.introBatidas;
+  const poses = danca.passos.map((passo) => {
+    const p = POSES.get(passo.poseId);
+    const pose = { t: Math.round(musica.offsetMs + batidas * batidaMs), rotulo: p.rotulo, assinatura: p.assinatura };
+    batidas += passo.batidas;
+    return pose;
+  });
+  return { poses, duracaoMs: Math.round(musica.offsetMs + batidas * batidaMs + 1500) };
+}
+
+// ---------------------------------------------------------------------------------------
+// Visão computacional
+// ---------------------------------------------------------------------------------------
+async function carregarDetector() {
+  const base = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${T.mediapipeVersao}`;
+  const { FilesetResolver, PoseLandmarker } = await import(`${base}/vision_bundle.mjs`);
+  const vision = await FilesetResolver.forVisionTasks(`${base}/wasm`);
+  const criar = (delegate) => PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_${T.modelo}/float16/latest/pose_landmarker_${T.modelo}.task`,
+      delegate,
+    },
+    runningMode: 'VIDEO',
+    numPoses: 1,
+  });
+  return criar('GPU').catch(() => criar('CPU'));
+}
+
+function suavizar(anterior, atual, suavizacao) {
+  if (!anterior || suavizacao <= 0) return atual;
+  return atual.map((p, i) => ({ ...p, x: (1 - suavizacao) * p.x + suavizacao * anterior[i].x, y: (1 - suavizacao) * p.y + suavizacao * anterior[i].y }));
+}
+
+function calcularAssinatura(pontos, w, h) {
+  const s = {};
+  for (const osso of LISTA_OSSOS) {
+    const [i, j] = OSSOS[osso];
+    if ((pontos[i].visibility ?? 1) < T.visibilidadeMin || (pontos[j].visibility ?? 1) < T.visibilidadeMin) continue;
+    s[osso] = F.direcao(pontos[i], pontos[j], w, h);
+  }
+  return s;
+}
+
+const quantoLevantado = (graus) => (1 - Math.sin((graus * Math.PI) / 180)) / 2;
+
+// ---------------------------------------------------------------------------------------
+// Desenho (espelhado como o vídeo; as contas usam a imagem original)
+// ---------------------------------------------------------------------------------------
+const naTela = (p, w, h) => ({ x: (1 - p.x) * w, y: p.y * h });
+const visivel = (p) => !!p && (p.visibility ?? 1) >= T.visibilidadeMin;
+
+function linha(ctx, a, b, cor, largura) {
+  ctx.strokeStyle = cor; ctx.lineWidth = largura; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+}
+function circulo(ctx, c, r, cor, largura) {
+  ctx.strokeStyle = cor; ctx.lineWidth = largura;
+  ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.stroke();
+}
+
+function desenharEsqueleto(ctx, pontos, w, h, cores = {}, assinatura = null) {
+  const g = Math.max(4, w / 110);
+  const P = (i) => naTela(pontos[i], w, h);
+  const discreto = 'rgba(255,255,255,0.45)';
+  for (const [i, j] of [[11, 12], [11, 23], [12, 24], [23, 24]]) {
+    if (visivel(pontos[i]) && visivel(pontos[j])) linha(ctx, P(i), P(j), discreto, g * 0.6);
+  }
+  if (visivel(pontos[0]) && visivel(pontos[11]) && visivel(pontos[12])) {
+    circulo(ctx, P(0), Math.hypot(P(11).x - P(12).x, P(11).y - P(12).y) * 0.3, discreto, g * 0.6);
+  }
+  for (const osso of LISTA_OSSOS) {
+    const [i, j] = OSSOS[osso];
+    if (!visivel(pontos[i]) || !visivel(pontos[j])) continue;
+    const cor = cores[osso] ?? COR.neutro;
+    ctx.shadowColor = cor; ctx.shadowBlur = g * 2;
+    linha(ctx, P(i), P(j), cor, g);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    for (const k of [i, j]) { ctx.beginPath(); ctx.arc(P(k).x, P(k).y, g * 0.8, 0, Math.PI * 2); ctx.fill(); }
+    if (assinatura && assinatura[osso] !== undefined) {
+      const txt = `${Math.round(assinatura[osso])}°`;
+      const m = { x: (P(i).x + P(j).x) / 2, y: (P(i).y + P(j).y) / 2 };
+      ctx.font = `700 ${Math.max(14, w / 40)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(txt, m.x, m.y);
+      ctx.fillStyle = cor; ctx.fillText(txt, m.x, m.y);
+    }
+  }
+}
+
+function ancora(pontos, w, h) {
+  if (pontos && visivel(pontos[11]) && visivel(pontos[12])) {
+    const ombroE = { x: pontos[11].x * w, y: pontos[11].y * h };
+    const ombroD = { x: pontos[12].x * w, y: pontos[12].y * h };
+    return { ombroE, ombroD, escala: Math.max(w * 0.06, Math.hypot(ombroE.x - ombroD.x, ombroE.y - ombroD.y)) };
+  }
+  return ancoraPadrao(w, h, Math.min(w, h) * 0.22, h * 0.32);
+}
+const ancoraPadrao = (w, h, escala, topo) => ({ ombroE: { x: w / 2 + escala / 2, y: topo }, ombroD: { x: w / 2 - escala / 2, y: topo }, escala });
+
+function desenharBoneco(ctx, alvo, anc, w, cor, alpha, grossura) {
+  const espelho = (p) => ({ x: w - p.x, y: p.y });
+  const ponta = (de, graus, tamanho) => graus === undefined ? null
+    : { x: de.x + Math.cos((graus * Math.PI) / 180) * tamanho * anc.escala, y: de.y + Math.sin((graus * Math.PI) / 180) * tamanho * anc.escala };
+  const tracar = (a, b, g = grossura) => linha(ctx, espelho(a), espelho(b), cor, g);
+  const { ombroE, ombroD, escala } = anc;
+  ctx.save();
+  ctx.globalAlpha = alpha; ctx.shadowColor = cor; ctx.shadowBlur = grossura * 2;
+  const quadrilE = { x: ombroE.x - escala * 0.15, y: ombroE.y + escala * 1.4 };
+  const quadrilD = { x: ombroD.x + escala * 0.15, y: ombroD.y + escala * 1.4 };
+  tracar(ombroE, ombroD, grossura * 0.6); tracar(ombroE, quadrilE, grossura * 0.6);
+  tracar(ombroD, quadrilD, grossura * 0.6); tracar(quadrilE, quadrilD, grossura * 0.6);
+  const pescoco = espelho({ x: (ombroE.x + ombroD.x) / 2, y: (ombroE.y + ombroD.y) / 2 });
+  circulo(ctx, { x: pescoco.x, y: pescoco.y - escala * 0.55 }, escala * 0.3, cor, grossura * 0.6);
+  for (const [ombro, braco, antebraco] of [[ombroE, 'bracoE', 'antebracoE'], [ombroD, 'bracoD', 'antebracoD']]) {
+    const cotovelo = ponta(ombro, alvo[braco], 0.85);
+    if (!cotovelo) continue;
+    tracar(ombro, cotovelo);
+    const pulso = ponta(cotovelo, alvo[antebraco], 0.75);
+    if (pulso) tracar(cotovelo, pulso);
+  }
+  ctx.restore();
+}
+
+function desenharMiniatura(canvas, alvo) {
+  const c = canvas.getContext('2d');
+  const { width: w, height: h } = canvas;
+  c.clearRect(0, 0, w, h);
+  desenharBoneco(c, alvo, ancoraPadrao(w, h, h * 0.26, h * 0.45), w, COR.fantasma, 1, Math.max(3, w / 22));
+}
+
+function novaMiniatura(alvo, tamanho = 64) {
+  const c = document.createElement('canvas');
+  c.width = c.height = tamanho * 2;
+  c.style.width = c.style.height = `${tamanho}px`;
+  c.className = 'mini';
+  desenharMiniatura(c, alvo);
+  return c;
+}
+
+// ---------------------------------------------------------------------------------------
+// Música: arquivo (do painel ou do computador) ou batida sintetizada. Também é o relógio do jogo.
+// ---------------------------------------------------------------------------------------
+class MusicaArquivo {
+  constructor(url) { this.audio = new Audio(url); this.audio.preload = 'auto'; }
+  async iniciar() { this.audio.currentTime = 0; await this.audio.play(); }
+  parar() { this.audio.pause(); }
+  agoraMs() { return this.audio.currentTime * 1000; }
+}
+
+class Batida {
+  constructor(bpm, duracaoMs) { this.bpm = bpm; this.duracaoMs = duracaoMs; this.ctx = null; }
+
+  async iniciar() {
+    this.ctx = new AudioContext();
+    await this.ctx.resume();
+    this.saida = this.ctx.createGain(); this.saida.gain.value = 0.8; this.saida.connect(this.ctx.destination);
+    this.ruido = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.5, this.ctx.sampleRate);
+    const d = this.ruido.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this.inicio = this.ctx.currentTime + 0.15;
+    this.passo = 0;
+    this.timer = setInterval(() => this.agendar(), 50);
+    this.agendar();
+  }
+
+  parar() { clearInterval(this.timer); this.ctx?.close(); this.ctx = null; }
+  agoraMs() { return this.ctx ? (this.ctx.currentTime - this.inicio) * 1000 : -Infinity; }
+
+  agendar() {
+    if (!this.ctx) return;
+    const colcheia = 30 / this.bpm;
+    while (this.inicio + this.passo * colcheia < this.ctx.currentTime + 0.2) {
+      const t = this.inicio + this.passo * colcheia;
+      if ((t - this.inicio) * 1000 > this.duracaoMs) return;
+      const p = this.passo++;
+      const raiz = [110, 87.31, 130.81, 98][Math.floor(p / 8) % 4];
+      if (p % 2 === 0) this.bumbo(t); else this.ruidoFiltrado(t, 'highpass', 7000, 0.12, 0.05);
+      if (p % 4 === 2) this.ruidoFiltrado(t, 'bandpass', 1600, 0.45, 0.16);
+      this.baixo(t, p % 2 === 0 ? raiz : raiz * 2, colcheia * 0.9);
+    }
+  }
+
+  bumbo(t) {
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    o.connect(g).connect(this.saida); o.start(t); o.stop(t + 0.3);
+  }
+
+  ruidoFiltrado(t, tipo, freq, ganho, dur) {
+    const s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.ruido; f.type = tipo; f.frequency.value = freq;
+    g.gain.setValueAtTime(ganho, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f).connect(g).connect(this.saida); s.start(t); s.stop(t + dur + 0.02);
+  }
+
+  baixo(t, freq, dur) {
+    const o = this.ctx.createOscillator(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = freq;
+    f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(200, t + dur);
+    g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(f).connect(g).connect(this.saida); o.start(t); o.stop(t + dur + 0.02);
+  }
+}
+
+// ---------------------------------------------------------------------------------------
+// Pontuação: cada pose vale numa janela em volta do seu instante; fica a MELHOR nota da janela.
+// ---------------------------------------------------------------------------------------
+class Placar {
+  constructor(poses, janelaMs) {
+    this.poses = poses; this.janelaMs = janelaMs;
+    this.melhor = poses.map(() => 0); this.fechada = poses.map(() => false);
+    this.pontos = 0; this.combo = 0; this.comboMax = 0;
+    this.contagem = Object.fromEntries(CLASSES.map((c) => [c.rotulo, 0]));
+  }
+  get multiplicador() {
+    const { passo, incremento, maximo } = C.pontuacao.combo;
+    return Math.min(maximo, 1 + Math.floor(this.combo / passo) * incremento);
+  }
+  avaliar(agora, assin, tolerancia) {
+    const novos = [];
+    this.poses.forEach((p, i) => {
+      if (this.fechada[i]) return;
+      if (assin && Math.abs(agora - p.t) <= this.janelaMs) {
+        this.melhor[i] = Math.max(this.melhor[i], F.comparar(assin, p.assinatura, tolerancia).nota);
+      }
+      if (agora > p.t + this.janelaMs) {
+        this.fechada[i] = true;
+        const classe = classificar(this.melhor[i]);
+        const errou = classe === CLASSES.at(-1);
+        this.combo = errou ? 0 : this.combo + 1;
+        this.comboMax = Math.max(this.comboMax, this.combo);
+        const pontos = Math.round(classe.pontos * this.multiplicador);
+        this.pontos += pontos;
+        this.contagem[classe.rotulo]++;
+        novos.push({ classe, pontos });
+      }
+    });
+    return novos;
+  }
+  alvoAtual() { const i = this.fechada.indexOf(false); return i === -1 ? null : i; }
+  terminou() { return this.fechada.every(Boolean); }
+}
+
+// ---------------------------------------------------------------------------------------
+// Estado da página
+// ---------------------------------------------------------------------------------------
+const estado = {
+  modo: 'aula',
+  detector: null, carregandoModelo: false, erroModelo: null, erroCamera: null,
+  pontos: null, erroMissao2: false,
+  tolerancia: C.aula.tolerancia, suavizacao: C.aula.suavizacao, mostrarAngulos: false, indiceTreino: 0,
+  fase: 'menu',
+  danca: DANCAS[0] ?? null,
+  musica: null,                 // { id, nome, url, bpm, offsetMs } ou null = batida do jogo
+  arquivoLocal: null,           // { url, nome, bpm } escolhido do computador
+  dificuldade: DIFICULDADES[Math.floor((DIFICULDADES.length - 1) / 2)] ?? { nome: '', tolerancia: 45, janelaMs: 400 },
+  rodada: null, placar: null, relogio: null, itensFila: [],
+};
+
+const musicaSugerida = (danca) => MUSICAS.find((m) => m.id === danca?.musicaSugerida) ?? null;
+estado.musica = musicaSugerida(estado.danca);
+
+const video = $('video');
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+
+function mostrar(id, sim) { $(id).classList.toggle('escondido', !sim); }
+const escapar = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function comemorar(texto) {
+  const el = $('comemoracao');
+  el.textContent = texto;
+  el.classList.remove('anima');
+  void el.offsetWidth;
+  el.classList.add('anima');
+}
+
+function atualizarAvisoPalco() {
+  const camera = missaoQueDefine('abrirCamera');
+  const corpo = missaoQueDefine('encontrarCorpo');
+  let html = '';
+  let erro = false;
+  if (!tem('abrirCamera')) {
+    html = camera
+      ? `<div class="cadeado">🔒</div><strong>Missão ${camera.n}: ${escapar(camera.titulo)}</strong>
+         <span>Escreva <code>abrirCamera</code> na aba <b>Aula</b> e clique em Testar.</span>`
+      : 'Configuração incompleta: nenhuma missão ativa define <code>abrirCamera</code> (veja o painel /admin).';
+    erro = !camera;
+  } else if (estado.erroCamera) {
+    html = estado.erroCamera; erro = true;
+  } else if (!estado.detector) {
+    html = estado.erroModelo ?? 'Carregando o modelo de pose…'; erro = !!estado.erroModelo;
+  } else if (!tem('encontrarCorpo')) {
+    html = corpo
+      ? `<div class="cadeado">🔒</div><strong>Missão ${corpo.n}: ${escapar(corpo.titulo)}</strong><span>O esqueleto aparece quando ela passar.</span>`
+      : 'Configuração incompleta: nenhuma missão ativa define <code>encontrarCorpo</code>.';
+    erro = !corpo;
+  }
+  $('aviso-palco').innerHTML = html;
+  $('aviso-palco').classList.toggle('erro', erro);
+  mostrar('aviso-palco', !!html);
+}
+
+// ---------------------------------------------------------------------------------------
+// Loop
+// ---------------------------------------------------------------------------------------
+let ultimoTempoVideo = -1;
+
+function loop() {
+  requestAnimationFrame(loop);
+  if (video.readyState < 2 || !video.videoWidth) return;
+  const w = video.videoWidth, h = video.videoHeight;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+    $('palco').style.aspectRatio = `${w} / ${h}`;
+    $('palco').style.width = `min(100%, calc((100vh - 110px) * ${w / h}))`;
+  }
+  if (estado.detector && tem('encontrarCorpo') && video.currentTime !== ultimoTempoVideo) {
+    ultimoTempoVideo = video.currentTime;
+    try {
+      const novos = F.encontrarCorpo(estado.detector, video, performance.now());
+      estado.pontos = novos ? suavizar(estado.pontos, novos, estado.suavizacao) : null;
+    } catch (e) {
+      estado.pontos = null;
+      if (!estado.erroMissao2) { estado.erroMissao2 = true; console.error('Erro em encontrarCorpo:', e); }
+    }
+  }
+  ctx.clearRect(0, 0, w, h);
+  try {
+    if (estado.modo === 'aula') quadroAula(w, h);
+    else quadroJogo(w, h);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+const coresDe = (r) => Object.fromEntries(Object.entries(r.porOsso ?? {}).map(([o, n]) => [o, corDaNota(n)]));
+
+function quadroAula(w, h) {
+  const pontos = estado.pontos;
+  const assin = pontos && tem('direcao') ? calcularAssinatura(pontos, w, h) : null;
+  let cores = {};
+  if (tem('comparar') && BIBLIOTECA.length) {
+    const alvo = BIBLIOTECA[estado.indiceTreino];
+    desenharBoneco(ctx, alvo.assinatura, ancora(pontos, w, h), w, COR.fantasma, 0.35, Math.max(5, w / 90));
+    $('rotulo-pose').textContent = alvo.rotulo;
+    if (assin) {
+      const r = F.comparar(assin, alvo.assinatura, estado.tolerancia);
+      cores = coresDe(r);
+      $('nota-ao-vivo').textContent = `${Math.round(r.nota * 100)}% · ${classificar(r.nota).rotulo}`;
+      $('nota-ao-vivo').style.color = corDaNota(r.nota);
+    } else {
+      $('nota-ao-vivo').textContent = '';
+    }
+  }
+  if (assin) {
+    for (const [lado, osso] of [['e', 'bracoE'], ['d', 'bracoD']]) {
+      const v = assin[osso] === undefined ? null : quantoLevantado(assin[osso]);
+      $(`barra-${lado}`).style.height = `${(v ?? 0) * 100}%`;
+      $(`valor-${lado}`).textContent = v === null ? '—' : `${Math.round(v * 100)}%`;
+    }
+  }
+  mostrar('medidores', !!assin);
+  if (pontos) desenharEsqueleto(ctx, pontos, w, h, cores, estado.mostrarAngulos ? assin : null);
+}
+
+function quadroJogo(w, h) {
+  const pontos = estado.pontos;
+  const { placar, relogio, rodada } = estado;
+  if (estado.fase !== 'jogando') {
+    if (pontos) desenharEsqueleto(ctx, pontos, w, h);
+    return;
+  }
+  const agora = relogio.agoraMs();
+  const tol = estado.dificuldade.tolerancia;
+  const assin = pontos ? calcularAssinatura(pontos, w, h) : null;
+  for (const r of placar.avaliar(agora, assin, tol)) mostrarFeedback(r);
+
+  let cores = {};
+  const i = placar.alvoAtual();
+  if (i !== null) {
+    const falta = placar.poses[i].t - agora;
+    if (falta < T.antecedenciaMs) {
+      const naHora = Math.abs(falta) <= placar.janelaMs;
+      const alpha = naHora ? 0.75 : 0.15 + 0.45 * (1 - Math.max(0, falta) / T.antecedenciaMs);
+      desenharBoneco(ctx, placar.poses[i].assinatura, ancora(pontos, w, h), w, naHora ? '#ffffff' : COR.fantasma, alpha, Math.max(6, w / 70));
+      if (assin && falta < 1200) cores = coresDe(F.comparar(assin, placar.poses[i].assinatura, tol));
+    }
+  }
+  if (pontos) desenharEsqueleto(ctx, pontos, w, h, cores);
+
+  $('pontos').textContent = placar.pontos.toLocaleString('pt-BR');
+  $('combo').textContent = placar.combo >= 2 ? `combo ${placar.combo}${placar.multiplicador > 1 ? ` ×${String(placar.multiplicador).replace('.', ',')}` : ''}` : '';
+  const faltaPrimeira = placar.poses[0].t - agora;
+  $('contagem').textContent = faltaPrimeira > 3000 ? 'Prepare-se!' : String(Math.ceil(faltaPrimeira / 1000));
+  mostrar('contagem', faltaPrimeira > 0);
+  placar.poses.forEach((p, k) => {
+    const falta = p.t - agora;
+    const item = estado.itensFila[k];
+    const naFila = falta < T.antecedenciaMs + 500 && falta > -placar.janelaMs;
+    item.style.display = naFila ? '' : 'none';
+    if (naFila) item.style.left = `calc(${Math.max(0, falta / T.antecedenciaMs) * 85}% + 4px)`;
+  });
+  mostrar('aviso-sumiu', !pontos);
+  if (agora > rodada.duracaoMs || (placar.terminou() && agora > placar.poses.at(-1).t + 1500)) terminarJogo();
+}
+
+function mostrarFeedback({ classe, pontos }) {
+  const el = $('feedback');
+  el.className = classe.css;
+  el.innerHTML = `${escapar(classe.rotulo)}!${pontos > 0 ? `<small>+${pontos}</small>` : ''}`;
+  void el.offsetWidth;
+  el.classList.add('anima');
+}
+
+// A música escolhida no menu, no formato { url, bpm, offsetMs } (url null = batida do jogo).
+function musicaDaRodada() {
+  if (estado.musica === 'arquivo' && estado.arquivoLocal) return { url: estado.arquivoLocal.url, bpm: estado.arquivoLocal.bpm, offsetMs: 0 };
+  if (estado.musica && estado.musica !== 'arquivo') return estado.musica;
+  return { url: null, bpm: estado.danca.bpm, offsetMs: 0 };
+}
+
+async function comecarJogo() {
+  const musica = musicaDaRodada();
+  estado.rodada = montarRodada(estado.danca, musica);
+  estado.placar = new Placar(estado.rodada.poses, estado.dificuldade.janelaMs);
+  estado.relogio = musica.url ? new MusicaArquivo(musica.url) : new Batida(musica.bpm, estado.rodada.duracaoMs);
+  $('fila').querySelectorAll('canvas').forEach((c) => c.remove());
+  estado.itensFila = estado.rodada.poses.map((p) => {
+    const c = novaMiniatura(p.assinatura);
+    c.style.display = 'none';
+    $('fila').appendChild(c);
+    return c;
+  });
+  try {
+    await estado.relogio.iniciar();
+  } catch (e) {
+    alert(`Não consegui tocar a música: ${e.message}`);
+    return;
+  }
+  estado.fase = 'jogando';
+  atualizarTela();
+}
+
+function terminarJogo() { estado.relogio?.parar(); estado.fase = 'fim'; atualizarTela(); }
+function sairDoJogo() { estado.relogio?.parar(); estado.fase = 'menu'; atualizarTela(); }
+
+// ---------------------------------------------------------------------------------------
+// Missões na tela
+// ---------------------------------------------------------------------------------------
+const chave = (m) => `jdp:missao:${m.id}`;
+const cartoes = {};
+
+function montarMissoes() {
+  for (const m of MISSOES) {
+    const el = document.createElement('details');
+    el.className = 'missao';
+    el.innerHTML = `
+      <summary><span class="icone">🔒</span> ${m.n}. ${escapar(m.titulo)}</summary>
+      ${m.conceito ? `<p><b>Conceito:</b> ${escapar(m.conceito)}</p>` : ''}
+      <textarea class="editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+      <div class="linha" style="margin-top: 8px">
+        <button class="botao pequeno" data-acao="testar">▶ Testar</button>
+        <button class="botao pequeno secundario" data-acao="resposta">Ver resposta</button>
+        <button class="link" data-acao="limpar">voltar ao início</button>
+      </div>
+      <div class="saida"></div>`;
+    const editor = el.querySelector('.editor');
+    editor.value = localStorage.getItem(chave(m)) ?? m.inicial;
+    editor.rows = Math.min(24, editor.value.split('\n').length + 2);
+    editor.addEventListener('input', () => localStorage.setItem(chave(m), editor.value));
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        editor.setRangeText('  ', editor.selectionStart, editor.selectionEnd, 'end');
+        editor.dispatchEvent(new Event('input'));
+      }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); testarMissao(m); }
+    });
+    el.querySelector('summary').addEventListener('click', () => { el.dataset.mexeu = '1'; });
+    el.addEventListener('click', (e) => {
+      const acao = e.target.closest('button')?.dataset.acao;
+      if (acao === 'testar') testarMissao(m);
+      if (acao === 'resposta') { editor.value = m.resposta; editor.dispatchEvent(new Event('input')); testarMissao(m); }
+      if (acao === 'limpar') { editor.value = m.inicial; editor.dispatchEvent(new Event('input')); }
+    });
+    $('lista-missoes').appendChild(el);
+    cartoes[m.id] = { el, editor, saida: el.querySelector('.saida') };
+  }
+}
+
+function abrirProxima(m) {
+  cartoes[m.id].el.open = false;
+  const proxima = MISSOES.find((x) => !feita(x));
+  if (proxima) {
+    cartoes[proxima.id].el.open = true;
+    cartoes[proxima.id].el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function testarMissao(m, silencioso = false) {
+  const { saida, editor } = cartoes[m.id];
+  const jaEstavaFeita = feita(m);
+  let funcoes;
+  try {
+    funcoes = compilar(m, editor.value);
+  } catch (e) {
+    saida.innerHTML = `<div class="erro">Erro no código: ${escapar(e.message)}</div>`;
+    if (m.verificacao !== 'camera') { delete resultadoMissao[m.id]; recalcularFuncoes(); }
+    return atualizarTela();
+  }
+
+  if (m.verificacao === 'camera') {
+    if (jaEstavaFeita) { saida.innerHTML = '<div class="ok">✔ A câmera já está funcionando.</div>'; return; }
+    const abrir = funcoes[m.exporta[0]];
+    saida.innerHTML = 'Abrindo a câmera…';
+    try {
+      if (typeof abrir !== 'function') throw new Error(`não achei a função ${m.exporta[0]}`);
+      await abrir(video);
+      if (!(video.srcObject instanceof MediaStream) || video.paused) throw new Error('o vídeo não começou a tocar (faltou video.srcObject = stream ou await video.play()?)');
+      resultadoMissao[m.id] = funcoes;
+      recalcularFuncoes();
+      estado.erroCamera = null;
+      saida.innerHTML = '<ul><li class="ok">✔ a câmera abriu e o vídeo está tocando</li></ul>';
+      if (!silencioso) { comemorar(`🎉 Missão ${m.n} completa: ${m.destrava}`); abrirProxima(m); }
+      ligarModelo();
+    } catch (e) {
+      const motivo = e.name === 'NotAllowedError' ? 'permissão da câmera negada (clique no cadeado ao lado do endereço e libere)'
+        : e.name === 'NotReadableError' ? 'a câmera está sendo usada por outro programa (Meet, Zoom, outra aba?)'
+        : e.message;
+      saida.innerHTML = `<div class="erro">✘ ${escapar(motivo)}</div>`;
+    }
+    return atualizarTela();
+  }
+
+  const linhas = [];
+  let passou = m.testes.length > 0;
+  for (const teste of m.testes) {
+    let ok = false, erro = '';
+    try { ok = montarTeste(teste.expressao)(funcoes, perto, pt) === true; } catch (e) { erro = e.message; }
+    if (!ok) passou = false;
+    linhas.push(`<li class="${ok ? 'ok' : 'falhou'}">${ok ? '✔' : '✘'} ${escapar(teste.descricao)}${erro ? ` — <em>${escapar(erro)}</em>` : ''}</li>`);
+  }
+  saida.innerHTML = m.testes.length ? `<ul>${linhas.join('')}</ul>` : '<div class="erro">Esta missão não tem testes cadastrados no painel.</div>';
+  if (passou) {
+    resultadoMissao[m.id] = funcoes;
+    estado.erroMissao2 = false;
+    if (!jaEstavaFeita && !silencioso) { comemorar(`🎉 Missão ${m.n} completa: ${m.destrava}`); abrirProxima(m); }
+  } else {
+    delete resultadoMissao[m.id];
+  }
+  recalcularFuncoes();
+  atualizarTela();
+}
+
+async function ligarModelo() {
+  if (estado.detector || estado.carregandoModelo) return;
+  estado.carregandoModelo = true;
+  atualizarAvisoPalco();
+  try {
+    estado.detector = await carregarDetector();
+    estado.erroModelo = null;
+  } catch (e) {
+    estado.erroModelo = `Não consegui carregar o modelo de pose (precisa de internet).<br><small>${escapar(e.message)}</small>`;
+  }
+  estado.carregandoModelo = false;
+  atualizarTela();
+}
+
+// ---------------------------------------------------------------------------------------
+// Painéis
+// ---------------------------------------------------------------------------------------
+const FUNCOES_DO_JOGO = ['abrirCamera', 'encontrarCorpo', 'direcao', 'comparar'];
+
+function painelJogo() {
+  const el = $('painel-jogo');
+  const faltando = MISSOES.filter((m) => !feita(m));
+  const semMissao = FUNCOES_DO_JOGO.filter((f) => !missaoQueDefine(f));
+
+  if (semMissao.length) {
+    el.innerHTML = `<h2>⚙️ Configuração incompleta</h2><p>Nenhuma missão ativa define: <code>${semMissao.join('</code>, <code>')}</code>. Ajuste no painel <b>/admin</b>.</p>`;
+    return;
+  }
+  if (!DANCAS.length) {
+    el.innerHTML = '<h2>⚙️ Nenhuma dança</h2><p>Cadastre uma dança com poses no painel <b>/admin</b>.</p>';
+    return;
+  }
+  if (faltando.length) {
+    el.innerHTML = `<h2>🔒 O jogo ainda está trancado</h2>
+      <p>Faltam as missões ${faltando.map((m) => m.n).join(', ')} na aba <b>Aula</b>.</p>
+      <button class="botao" data-ir="aula">Ir para a Aula</button>
+      ${C.site.liberarTudo ? '<button class="link" data-acao="liberar">liberar tudo com as respostas prontas</button>' : ''}`;
+    return;
+  }
+
+  if (estado.fase === 'fim') {
+    const p = estado.placar;
+    const bons = (p.contagem[CLASSES[0].rotulo] + (CLASSES.length > 2 ? p.contagem[CLASSES[1].rotulo] : 0)) / p.poses.length;
+    const titulo = bons > 0.8 ? 'Lenda da pista!' : bons > 0.5 ? 'Mandou bem!' : bons > 0.25 ? 'Tá pegando o jeito' : 'O importante é se divertir 😅';
+    el.innerHTML = `<h2>${titulo}</h2>
+      <div class="placar-final">${p.pontos.toLocaleString('pt-BR')} pontos</div>
+      <div class="classes">
+        ${CLASSES.map((c) => `<div class="${c.css}"><b>${p.contagem[c.rotulo]}</b><span>${escapar(c.rotulo)}</span></div>`).join('')}
+        <div><b>${p.comboMax}</b><span>maior combo</span></div>
+      </div>
+      <button class="botao grande" data-acao="comecar">Jogar de novo</button>
+      <button class="botao secundario" data-acao="menu">Trocar a dança ou a música</button>`;
+    return;
+  }
+
+  const selecionada = estado.musica === 'arquivo' ? 'arquivo' : estado.musica ? `m${estado.musica.id}` : 'batida';
+  const opcaoMusica = (valor, titulo, sub) =>
+    `<button class="opcao ${selecionada === valor ? 'ativa' : ''}" data-musica="${valor}"><span class="icone-musica">🎵</span><span><b>${escapar(titulo)}</b><small>${escapar(sub)}</small></span></button>`;
+
+  el.innerHTML = `
+    <h2>Escolha a dança</h2><div id="lista-dancas" class="lista"></div>
+    <h2>Escolha a música</h2>
+    <div class="lista">
+      ${opcaoMusica('batida', 'Batida do jogo', `sintetizada · ${estado.danca.bpm} bpm`)}
+      ${MUSICAS.map((m) => opcaoMusica(`m${m.id}`, m.nome, [m.artista, `${m.bpm} bpm`].filter(Boolean).join(' · '))).join('')}
+      ${opcaoMusica('arquivo', estado.arquivoLocal ? estado.arquivoLocal.nome : 'Arquivo do meu computador…', estado.arquivoLocal ? `${estado.arquivoLocal.bpm} bpm` : 'mp3, ogg, wav…')}
+    </div>
+    <div id="config-arquivo" class="linha ${selecionada === 'arquivo' ? '' : 'escondido'}">
+      <label class="botao pequeno secundario" style="position: relative">Escolher arquivo
+        <input id="input-arquivo" type="file" accept="audio/*" style="position: absolute; inset: 0; opacity: 0; cursor: pointer" /></label>
+      <label class="linha">BPM <input id="input-bpm" type="number" min="40" max="220" value="${estado.arquivoLocal?.bpm ?? 120}" style="width: 72px" /></label>
+    </div>
+    <h2>Dificuldade</h2>
+    <div class="linha">${DIFICULDADES.map((d, i) =>
+      `<button class="botao pequeno ${d === estado.dificuldade ? '' : 'secundario'}" data-dificuldade="${i}">${escapar(d.nome)}</button>`).join('')}</div>
+    <button class="botao grande" data-acao="comecar" ${podeComecar() ? '' : 'disabled'}>${estado.detector ? 'Começar!' : 'Esperando o modelo…'}</button>
+    <p class="nota">${duracaoTexto()} · afaste-se até a câmera ver você da cintura para cima.</p>`;
+
+  DANCAS.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.className = `opcao ${d === estado.danca ? 'ativa' : ''}`;
+    b.dataset.danca = i;
+    const primeira = POSES.get(d.passos[0].poseId);
+    b.append(novaMiniatura(primeira.assinatura, 44));
+    b.insertAdjacentHTML('beforeend', `<span><b>${escapar(d.nome)}</b><small>${d.passos.length} poses</small></span>`);
+    $('lista-dancas').appendChild(b);
+  });
+}
+
+const podeComecar = () => estado.detector && !(estado.musica === 'arquivo' && !estado.arquivoLocal);
+const duracaoTexto = () => {
+  if (estado.musica === 'arquivo' && !estado.arquivoLocal) return 'escolha um arquivo de música';
+  return `${Math.round(montarRodada(estado.danca, musicaDaRodada()).duracaoMs / 1000)} s`;
+};
+
+function atualizarMissoes() {
+  let abriuUma = false;
+  for (const m of MISSOES) {
+    const { el } = cartoes[m.id];
+    el.classList.toggle('ok', feita(m));
+    el.querySelector('.icone').textContent = feita(m) ? '✅' : '🔒';
+    if (!feita(m) && !abriuUma) { abriuUma = true; if (!el.dataset.mexeu) el.open = true; }
+  }
+  mostrar('ajustes', tem('comparar'));
+  if (BIBLIOTECA.length) desenharMiniatura($('mini-treino'), BIBLIOTECA[estado.indiceTreino].assinatura);
+}
+
+function atualizarTela() {
+  const jogando = estado.modo === 'jogo' && estado.fase === 'jogando';
+  document.querySelectorAll('.abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.modo === estado.modo));
+  $('main').classList.toggle('tela-cheia', jogando);
+  $('main').classList.toggle('modo-aula', estado.modo === 'aula');
+  mostrar('painel-jogo', estado.modo === 'jogo' && !jogando);
+  mostrar('painel-aula', estado.modo === 'aula');
+  for (const id of ['hud-jogo', 'fila', 'btn-sair']) mostrar(id, jogando);
+  if (!jogando) for (const id of ['contagem', 'aviso-sumiu']) mostrar(id, false);
+  mostrar('hud-aula', estado.modo === 'aula' && tem('comparar'));
+  if (estado.modo !== 'aula') mostrar('medidores', false);
+  $('progresso').textContent = `Missões: ${MISSOES.filter(feita).length} de ${MISSOES.length}`;
+  atualizarAvisoPalco();
+  atualizarMissoes();
+  if (estado.modo === 'jogo') painelJogo();
+}
+
+// ---------------------------------------------------------------------------------------
+// Botões
+// ---------------------------------------------------------------------------------------
+function trocarModo(modo) {
+  if (estado.fase === 'jogando') sairDoJogo();
+  estado.modo = modo;
+  atualizarTela();
+}
+document.querySelectorAll('.abas button').forEach((b) => b.addEventListener('click', () => trocarModo(b.dataset.modo)));
+
+$('painel-jogo').addEventListener('click', async (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.ir) return trocarModo(b.dataset.ir);
+  if (b.dataset.acao === 'liberar') {
+    for (const m of MISSOES) {
+      if (feita(m)) continue;
+      cartoes[m.id].editor.value = m.resposta;
+      cartoes[m.id].editor.dispatchEvent(new Event('input'));
+      await testarMissao(m, true);
+    }
+    return;
+  }
+  if (b.dataset.danca) {
+    estado.danca = DANCAS[b.dataset.danca];
+    if (estado.musica !== 'arquivo') estado.musica = musicaSugerida(estado.danca);
+  }
+  if (b.dataset.musica) {
+    const v = b.dataset.musica;
+    estado.musica = v === 'batida' ? null : v === 'arquivo' ? 'arquivo' : MUSICAS.find((m) => `m${m.id}` === v);
+  }
+  if (b.dataset.dificuldade) estado.dificuldade = DIFICULDADES[b.dataset.dificuldade];
+  if (b.dataset.acao === 'comecar') return void comecarJogo();
+  if (b.dataset.acao === 'menu') estado.fase = 'menu';
+  atualizarTela();
+});
+
+$('painel-jogo').addEventListener('change', (e) => {
+  if (e.target.id === 'input-arquivo' && e.target.files[0]) {
+    const f = e.target.files[0];
+    estado.arquivoLocal = { url: URL.createObjectURL(f), nome: f.name.replace(/\.[^.]+$/, ''), bpm: Number($('input-bpm').value) || 120 };
+    atualizarTela();
+  }
+  if (e.target.id === 'input-bpm' && estado.arquivoLocal) {
+    estado.arquivoLocal.bpm = Math.min(220, Math.max(40, Number(e.target.value) || 120));
+    atualizarTela();
+  }
+});
+
+$('btn-sair').addEventListener('click', sairDoJogo);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && estado.fase === 'jogando') sairDoJogo(); });
+
+const trocarTreino = (passo) => {
+  estado.indiceTreino = (estado.indiceTreino + passo + BIBLIOTECA.length) % BIBLIOTECA.length;
+  desenharMiniatura($('mini-treino'), BIBLIOTECA[estado.indiceTreino].assinatura);
+};
+$('pose-anterior').addEventListener('click', () => trocarTreino(-1));
+$('pose-proxima').addEventListener('click', () => trocarTreino(1));
+$('tolerancia').addEventListener('input', (e) => { estado.tolerancia = Number(e.target.value); $('txt-tolerancia').textContent = `${e.target.value}°`; });
+$('suavizacao').addEventListener('input', (e) => { estado.suavizacao = Number(e.target.value); $('txt-suavizacao').textContent = e.target.value.replace('.', ','); });
+$('mostrar-angulos').addEventListener('change', (e) => { estado.mostrarAngulos = e.target.checked; });
+
+$('btn-recomecar').addEventListener('click', () => {
+  if (!confirm('Apagar o código de todas as missões e começar do zero?')) return;
+  MISSOES.forEach((m) => localStorage.removeItem(chave(m)));
+  location.reload();
+});
+
+$('btn-qr').addEventListener('click', () => {
+  const link = location.href.split('#')[0];
+  $('img-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=10&data=${encodeURIComponent(link)}`;
+  $('txt-link').textContent = link;
+  mostrar('modal-qr', true);
+});
+$('fechar-qr').addEventListener('click', () => mostrar('modal-qr', false));
+$('modal-qr').addEventListener('click', (e) => { if (e.target.id === 'modal-qr') mostrar('modal-qr', false); });
+
+// ---------------------------------------------------------------------------------------
+// Começo
+// ---------------------------------------------------------------------------------------
+async function iniciar() {
+  document.title = C.site.titulo;
+  $('logo').innerHTML = escapar(C.site.titulo).replace(/^(.*?)( de .*)?$/, (_, a, b) => (b ? `${a} <span>${b.trim()}</span>` : a));
+  $('boas-vindas').textContent = C.site.boasVindas;
+  $('tolerancia').value = estado.tolerancia; $('txt-tolerancia').textContent = `${estado.tolerancia}°`;
+  $('suavizacao').value = estado.suavizacao; $('txt-suavizacao').textContent = String(estado.suavizacao).replace('.', ',');
+  montarMissoes();
+  atualizarTela();
+  for (const m of MISSOES) {
+    if (cartoes[m.id].editor.value !== m.inicial) await testarMissao(m, true);
+  }
+  atualizarTela();
+  requestAnimationFrame(loop);
+}
+
+iniciar();
+@endverbatim
+</script>
+</body>
+</html>
