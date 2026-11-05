@@ -1,59 +1,61 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<h1>Maria Luiza Castro</h1>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+<p><strong>Desenvolvedora Full Stack · PHP / Laravel</strong><br>
+Votuporanga, SP · Remoto ou presencial</p>
+
+<p>
+  <a href="mailto:maecastr2@gmail.com"><img src="https://img.shields.io/badge/E--mail-maecastr2%40gmail.com-D14836?style=flat-square&logo=gmail&logoColor=white" alt="E-mail"></a>
+  <a href="https://www.linkedin.com/in/SEU-LINKEDIN"><img src="https://img.shields.io/badge/LinkedIn-Maria%20Luiza%20Castro-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 </p>
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Desenvolvo e mantenho sistemas web em **Laravel** para a operação de um provedor de internet fibra óptica, integrando back-end, painéis administrativos e interfaces usadas tanto pela equipe interna quanto pelos clientes.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Antes de programar, trabalhei no **financeiro e atendimento** da mesma empresa — cobrança, renegociação e suporte a pagamentos. Por isso escrevo código pensando em quem vai usar a tela no dia a dia, não só em quem vai ler o código.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### O que eu faço
 
-## Learning Laravel
+- **Back-end Laravel** — modelagem de dados, regras de negócio, filas, APIs e integrações
+- **Painéis administrativos** com **Filament** e **Livewire** — CRUDs, dashboards com indicadores, controle de acesso (ACL)
+- **Banco de dados** — MySQL e PostgreSQL, migrations, consultas e otimização
+- **Infraestrutura** — ambientes com Docker, deploy com Nginx, noções de AWS
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Stack
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+<p>
+  <img src="https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP">
+  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel">
+  <img src="https://img.shields.io/badge/Filament-FDAE4B?style=flat-square&logo=laravel&logoColor=black" alt="Filament">
+  <img src="https://img.shields.io/badge/Livewire-4E56A6?style=flat-square&logo=livewire&logoColor=white" alt="Livewire">
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="JavaScript">
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white" alt="HTML5">
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white" alt="CSS3">
+  <br>
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white" alt="MySQL">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white" alt="Nginx">
+  <img src="https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazonwebservices&logoColor=white" alt="AWS">
+  <img src="https://img.shields.io/badge/Git-F05032?style=flat-square&logo=git&logoColor=white" alt="Git">
+</p>
 
-## Laravel Sponsors
+### Experiência
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+**Net Rubi Fibra** · provedor de internet fibra óptica · desde jul/2024
 
-### Premium Partners
+- **Desenvolvedora Full Stack** (jul/2025 – atual) — desenvolvimento e manutenção dos sistemas web da empresa em Laravel, atendendo demandas internas (operação, financeiro, atendimento) e funcionalidades voltadas ao cliente final.
+- **Financeiro e Atendimento** (jul/2024 – atual) — cobrança, renegociação de débitos e suporte a pagamentos; a visão de negócio por trás dos sistemas que desenvolvo.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Projetos em destaque
 
-## Contributing
+**AE Espaço Beleza — Gestão e agendamento online**<br>
+Plataforma web para gestão de um salão de beleza: agendamentos, catálogo de serviços, controle de usuários e permissões (ACL) e dashboard de desempenho. Responsável pelo back-end e pelo painel administrativo.<br>
+`Laravel` `Filament` `Livewire` `MySQL`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**Ensinando a Ensinar — Instrutora**<br>
+Ministrei curso de HTML, CSS e JavaScript para professores e alunos da rede estadual, em parceria entre IFSP e Governo do Estado.
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+<sub>Bacharelado em Sistemas de Informação — IFSP · Inglês intermediário</sub>

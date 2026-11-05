@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Just Dance de Pobre</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕺</text></svg>" />
+<style>
+  :root {
+    --fundo: #0d0b1a; --cartao: #17142b; --cartao-2: #221d3d; --borda: #342d5c;
+    --texto: #f4f1ff; --texto-2: #a9a2cc;
+    --rosa: #ff3ea5; --ciano: #2de2e6; --amarelo: #ffd319; --verde: #3cff8f; --vermelho: #ff3e6c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--texto); line-height: 1.45;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(255, 62, 165, .18), transparent 60%), var(--fundo);
+  }
+  h2 { margin: 0; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .85em; background: var(--cartao-2); padding: 2px 6px; border-radius: 6px; color: var(--amarelo); }
+  .nota { color: var(--texto-2); font-size: .9rem; margin: 0; }
+  .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .escondido { display: none !important; }
+
+  /* topo */
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+  .logo { font-weight: 900; font-size: 1.3rem; }
+  .logo span { color: var(--rosa); }
+  .abas button { background: none; border: 0; color: var(--texto-2); font: inherit; font-weight: 700; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+  .abas button.ativa { background: var(--ciano); color: var(--fundo); }
+  .direita { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+  #progresso { color: var(--texto-2); font-size: .9rem; }
+
+  /* layout */
+  main { display: grid; grid-template-columns: 1fr 380px; gap: 18px; padding: 18px; max-width: 1600px; margin: 0 auto; align-items: start; }
+  main.modo-aula { grid-template-columns: 1fr 520px; }
+  main.tela-cheia { grid-template-columns: 1fr; }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .botao { background: var(--rosa); color: #fff; border: 0; border-radius: 999px; padding: 10px 20px; font: inherit; font-weight: 800; cursor: pointer; }
+  .botao:disabled { opacity: .5; cursor: not-allowed; }
+  .botao.secundario { background: var(--cartao-2); border: 1px solid var(--borda); }
+  .botao.grande { font-size: 1.15rem; padding: 14px 28px; }
+  .botao.pequeno { padding: 6px 12px; font-size: .88rem; }
+  .link { background: none; border: 0; color: var(--texto-2); font: inherit; font-size: .85rem; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  /* palco: vídeo + desenho */
+  #palco { position: relative; margin: 0 auto; width: min(100%, calc((100vh - 110px) * 4 / 3)); aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #000; border: 1px solid var(--borda); }
+  #video, #canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #video { transform: scaleX(-1); object-fit: cover; } /* espelho só na tela; as contas usam a imagem original */
+  .aviso-palco { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; background: rgba(13, 11, 26, .88); font-size: 1.1rem; }
+  .aviso-palco.erro { color: var(--vermelho); }
+  .cadeado { font-size: 3rem; }
+  #comemoracao { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(13, 11, 26, .9); border: 2px solid var(--verde); border-radius: 16px; padding: 16px 24px; text-align: center; font-weight: 800; font-size: 1.3rem; opacity: 0; pointer-events: none; }
+  #comemoracao.anima { animation: comemora 2.6s ease-out forwards; }
+  @keyframes comemora { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6) } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) } 20% { transform: translate(-50%, -50%) scale(1) } 80% { opacity: 1 } 100% { opacity: 0 } }
+
+  /* HUD do jogo */
+  #hud-jogo { position: absolute; top: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; font-weight: 900; text-shadow: 0 2px 12px rgba(0, 0, 0, .8); }
+  #pontos { font-size: clamp(1.6rem, 4vw, 3rem); }
+  #combo { font-size: clamp(1rem, 2.4vw, 1.8rem); color: var(--amarelo); }
+  #feedback { position: absolute; top: 22%; left: 0; right: 0; text-align: center; pointer-events: none; opacity: 0;
+    font-size: clamp(2.2rem, 8vw, 5.5rem); font-weight: 900; font-style: italic; text-shadow: 0 0 30px currentColor, 0 4px 0 rgba(0, 0, 0, .5); }
+  #feedback small { display: block; font-size: .4em; font-style: normal; color: #fff; }
+  #feedback.anima { animation: estouro .9s ease-out forwards; }
+  @keyframes estouro { 0% { transform: scale(.4); opacity: 0 } 15% { transform: scale(1.15); opacity: 1 } 30% { transform: scale(1) } 100% { transform: translateY(-30px); opacity: 0 } }
+  .perfeito { color: var(--verde); } .otimo { color: var(--ciano); } .bom { color: var(--amarelo); } .errou { color: var(--vermelho); }
+  #contagem { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-size: clamp(3rem, 14vw, 9rem); font-weight: 900; color: var(--amarelo); }
+  #fila { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 88px; background: rgba(0, 0, 0, .5); border-radius: 14px; overflow: hidden; }
+  #fila .alvo { position: absolute; left: 4px; top: 6px; bottom: 6px; width: 72px; border: 3px solid var(--rosa); border-radius: 12px; box-shadow: 0 0 18px var(--rosa); }
+  #fila canvas { position: absolute; top: 12px; }
+  #aviso-sumiu { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); background: rgba(255, 62, 108, .9); padding: 8px 16px; border-radius: 999px; font-weight: 800; }
+  #btn-sair { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); opacity: .7; }
+  canvas.mini { background: var(--cartao-2); border-radius: 10px; flex-shrink: 0; }
+
+  /* HUD da aula */
+  #hud-aula { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 4px; }
+  #hud-aula span { background: rgba(0, 0, 0, .6); padding: 4px 12px; border-radius: 999px; font-weight: 800; font-size: clamp(1rem, 2.4vw, 1.6rem); width: fit-content; }
+  #rotulo-pose { color: var(--ciano); }
+  #medidores { position: absolute; right: 12px; top: 12px; display: flex; gap: 10px; }
+  .medidor { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(0, 0, 0, .55); padding: 8px; border-radius: 10px; font-weight: 800; }
+  .trilho { width: 18px; height: 110px; background: var(--cartao-2); border-radius: 999px; overflow: hidden; display: flex; align-items: flex-end; }
+  .trilho div { width: 100%; background: linear-gradient(0deg, var(--rosa), var(--amarelo)); }
+  .medidor small { color: var(--texto-2); font-size: .7rem; font-weight: 400; }
+
+  /* painel do jogo */
+  .opcao { display: flex; gap: 12px; align-items: center; text-align: left; background: var(--cartao-2); border: 2px solid transparent; border-radius: 12px; padding: 6px 10px; color: var(--texto); font: inherit; cursor: pointer; }
+  .opcao small { display: block; color: var(--texto-2); }
+  .opcao.ativa { border-color: var(--rosa); }
+  .placar-final { font-size: 2.6rem; font-weight: 900; color: var(--amarelo); }
+  .classes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .classes div { background: var(--cartao-2); border-radius: 10px; padding: 8px; text-align: center; }
+  .classes b { display: block; font-size: 1.6rem; }
+  .classes span { font-size: .8rem; color: var(--texto-2); }
+
+  /* painel da aula: missões com editor */
+  details.missao { background: var(--cartao-2); border: 1px solid var(--borda); border-radius: 12px; padding: 10px 14px; }
+  details.missao.ok { border-color: rgba(60, 255, 143, .6); }
+  details.missao summary { cursor: pointer; font-weight: 800; font-size: 1.05rem; }
+  details.missao p { margin: 8px 0; font-size: .92rem; }
+  .editor {
+    width: 100%; min-height: 240px; resize: vertical; margin-top: 8px;
+    background: #0a0816; color: #e8e4ff; border: 1px solid var(--borda); border-radius: 10px; padding: 12px;
+    font: 13px/1.5 ui-monospace, Consolas, 'Cascadia Code', monospace; tab-size: 2; white-space: pre;
+  }
+  .editor:focus { outline: 2px solid var(--ciano); }
+  .saida { font-size: .88rem; margin-top: 8px; }
+  .saida ul { list-style: none; padding: 0; margin: 6px 0 0; }
+  .saida .ok { color: var(--verde); } .saida .falhou { color: var(--vermelho); }
+  .saida .erro { color: var(--vermelho); font-family: ui-monospace, Consolas, monospace; font-size: .85rem; white-space: pre-wrap; }
+  .slider { display: flex; flex-direction: column; gap: 2px; }
+  .slider b { color: var(--ciano); }
+  .slider input { accent-color: var(--rosa); }
+
+  /* QR code */
+  #modal-qr { position: fixed; inset: 0; background: rgba(0, 0, 0, .8); display: grid; place-items: center; z-index: 10; }
+  #modal-qr .cartao { align-items: center; text-align: center; max-width: 92vw; }
+  #modal-qr img { width: min(70vmin, 420px); height: auto; background: #fff; border-radius: 12px; padding: 12px; }
+  #modal-qr code { font-size: 1.1rem; word-break: break-all; }
+
+  @media (min-width: 1001px) { #palco { position: sticky; top: 12px; } } /* o vídeo fica na tela enquanto rola as missões */
+  @media (max-width: 1000px) { main, main.modo-aula { grid-template-columns: 1fr; padding: 10px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Just Dance <span>de Pobre</span></div>
+  <nav class="abas">
+    <button data-modo="aula">Aula</button>
+    <button data-modo="jogo">Jogar</button>
+  </nav>
+  <div class="direita">
+    <span id="progresso"></span>
+    <button id="btn-qr" class="botao pequeno secundario">📱 Link para a sala</button>
+  </div>
+</header>
+
+<main id="main">
+  <!-- PALCO: vídeo da câmera com os desenhos por cima -->
+  <div id="palco">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <div id="hud-jogo" class="escondido"><div id="pontos">0</div><div id="combo"></div></div>
+    <div id="feedback"></div>
+    <div id="contagem" class="escondido"></div>
+    <div id="fila" class="escondido"><div class="alvo"></div></div>
+    <div id="aviso-sumiu" class="escondido">Cadê você? Fique de frente para a câmera</div>
+    <button id="btn-sair" class="botao pequeno escondido">Sair (Esc)</button>
+
+    <div id="hud-aula" class="escondido"><span id="rotulo-pose"></span><span id="nota-ao-vivo"></span></div>
+    <div id="medidores" class="escondido">
+      <div class="medidor"><div class="trilho"><div id="barra-e"></div></div><span id="valor-e">—</span><small>Braço esq.</small></div>
+      <div class="medidor"><div class="trilho"><div id="barra-d"></div></div><span id="valor-d">—</span><small>Braço dir.</small></div>
+    </div>
+
+    <div id="aviso-palco" class="aviso-palco escondido"></div>
+    <div id="comemoracao"></div>
+  </div>
+
+  <!-- PAINEL DA AULA: as missões são escritas aqui mesmo, na tela -->
+  <aside id="painel-aula" class="cartao">
+    <div class="linha" style="justify-content: space-between">
+      <h2>Missões</h2>
+      <button id="btn-recomecar" class="link">recomeçar do zero</button>
+    </div>
+    <p class="nota">Escreva cada função no quadro, clique em <b>Testar</b> e veja o jogo ganhar vida.</p>
+    <div id="lista-missoes" style="display: flex; flex-direction: column; gap: 10px"></div>
+
+    <div id="ajustes" class="cartao escondido" style="background: var(--cartao-2)">
+      <div id="treino" class="linha">
+        <b>Pose de treino:</b>
+        <button id="pose-anterior" class="botao pequeno">◀</button>
+        <canvas id="mini-treino" class="mini" width="96" height="96" style="width: 48px; height: 48px"></canvas>
+        <button id="pose-proxima" class="botao pequeno">▶</button>
+      </div>
+      <label class="slider">
+        <span>Tolerância <b id="txt-tolerancia">45°</b></span>
+        <input id="tolerancia" type="range" min="10" max="90" step="5" value="45" />
+        <small class="nota">Quanto cada osso pode errar antes de a nota zerar.</small>
+      </label>
+      <label class="slider">
+        <span>Suavização <b id="txt-suavizacao">0,5</b></span>
+        <input id="suavizacao" type="range" min="0" max="0.9" step="0.1" value="0.5" />
+        <small class="nota">Mais suave = esqueleto treme menos, mas atrasa.</small>
+      </label>
+      <label class="linha"><input id="mostrar-angulos" type="checkbox" /> Mostrar os ângulos dos ossos</label>
+    </div>
+  </aside>
+
+  <!-- PAINEL DO JOGO -->
+  <aside id="painel-jogo" class="cartao escondido"></aside>
+</main>
+
+<div id="modal-qr" class="escondido">
+  <div class="cartao">
+    <h2>Entre pelo celular</h2>
+    <img id="img-qr" alt="QR code do link" />
+    <code id="txt-link"></code>
+    <button class="botao" id="fechar-qr">Fechar</button>
+  </div>
+</div>
+
+<script type="module">
+// O MediaPipe (modelo de inteligência artificial do Google que acha o corpo) vem da internet.
+import { FilesetResolver, PoseLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/vision_bundle.mjs';
+
+const $ = (id) => document.getElementById(id);
+
+// =======================================================================================
+// AS 4 MISSÕES
+// Cada uma tem o código inicial (com dicas) que aparece no quadro e a resposta.
+// O código que a pessoa escreve na tela é testado e, se passar, passa a ser usado pelo jogo.
+// =======================================================================================
+const MISSOES = [
+  {
+    n: 1, titulo: 'Abra os olhos', exporta: ['abrirCamera'],
+    conceito: 'Um vídeo são ~30 imagens por segundo, e cada imagem é uma matriz de pixels.',
+    destrava: 'o vídeo da câmera apareceu!',
+    inicial:
+`// Peça a câmera ao navegador e coloque a imagem no <video>.
+//  - navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+//    devolve o "stream" da câmera (use await)
+//  - para mostrar no vídeo: video.srcObject = stream
+//  - depois: await video.play()
+
+async function abrirCamera(video) {
+  // escreva aqui
+
+}`,
+    resposta:
+`async function abrirCamera(video) {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+  video.srcObject = stream;
+  await video.play();
+}`,
+  },
+  {
+    n: 2, titulo: 'Encontre o corpo', exporta: ['encontrarCorpo'],
+    conceito: 'Um modelo treinado acha 33 pontos do corpo em cada frame, cada um com uma confiança (visibility).',
+    destrava: 'o esqueleto apareceu!',
+    inicial:
+`// O detector é o modelo do MediaPipe: ele olha o vídeo e acha 33 pontos do corpo.
+//  - detector.detectForVideo(video, agoraMs) devolve um objeto com "landmarks"
+//  - landmarks é uma LISTA DE PESSOAS; cada pessoa é uma lista de 33 pontos {x, y, visibility}
+//  - se ninguém aparecer, landmarks vem vazio: []
+// Devolva os pontos da PRIMEIRA pessoa, ou null se não tiver ninguém.
+
+function encontrarCorpo(detector, video, agoraMs) {
+  // escreva aqui
+
+}`,
+    resposta:
+`function encontrarCorpo(detector, video, agoraMs) {
+  const resultado = detector.detectForVideo(video, agoraMs);
+  return resultado.landmarks[0] ?? null;
+}`,
+  },
+  {
+    n: 3, titulo: 'Para onde aponta?', exporta: ['direcao'],
+    conceito: 'Transformamos pontos em características: a direção de cada osso, em graus.',
+    destrava: 'o medidor do braço apareceu!',
+    inicial:
+`// Um osso vai do ponto a até o ponto b. Devolva para onde ele aponta, em GRAUS.
+//  - Math.atan2(dy, dx) dá o ângulo em radianos; graus = radianos * 180 / Math.PI
+//  - na imagem o y cresce PARA BAIXO: direita = 0°, baixo = 90°, cima = -90°
+//  - CUIDADO: x e y vão de 0 a 1. Multiplique dx por largura e dy por altura.
+
+function direcao(a, b, largura, altura) {
+  // escreva aqui
+
+}`,
+    resposta:
+`function direcao(a, b, largura, altura) {
+  const dx = (b.x - a.x) * largura;
+  const dy = (b.y - a.y) * altura;
+  return Math.atan2(dy, dx) * 180 / Math.PI;
+}`,
+  },
+  {
+    n: 4, titulo: 'Isso é a pose?', exporta: ['diferenca', 'comparar'],
+    conceito: 'Similaridade: quanto cada osso está longe do alvo, dentro de uma tolerância.',
+    destrava: 'a nota apareceu e o jogo liberou!',
+    inicial:
+`// Parte A: quantos graus separam duas direções? (sempre de 0 a 180)
+//   PEGADINHA: 170° e -170° estão a 20° (dando a volta), não a 340°.
+//   Dica: d = Math.abs(a - b) % 360; se d > 180, a resposta é 360 - d.
+function diferenca(a, b) {
+  // escreva aqui
+
+}
+
+// Parte B: compare a pose do aluno com a do alvo.
+//   As poses são objetos assim: { bracoE: 30, antebracoE: -45, bracoD: 150, antebracoD: 170 }
+//   Para cada osso do alvo:
+//     - se o aluno não tem esse osso (a câmera não viu), pule
+//     - nota do osso = Math.max(0, 1 - diferenca(aluno[osso], alvo[osso]) / tolerancia)
+//   nota final = média das notas dos ossos vistos
+//   se viu MENOS DA METADE dos ossos do alvo, a nota final é 0
+//   devolva { nota, porOsso }  (porOsso guarda a nota de cada osso visto)
+function comparar(aluno, alvo, tolerancia) {
+  const ossos = Object.keys(alvo);
+  const porOsso = {};
+  // escreva aqui
+
+}`,
+    resposta:
+`function diferenca(a, b) {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+function comparar(aluno, alvo, tolerancia) {
+  const ossos = Object.keys(alvo);
+  const porOsso = {};
+  let soma = 0;
+  let vistos = 0;
+  for (const osso of ossos) {
+    if (aluno[osso] === undefined) continue;
+    porOsso[osso] = Math.max(0, 1 - diferenca(aluno[osso], alvo[osso]) / tolerancia);
+    soma += porOsso[osso];
+    vistos++;
+  }
+  const nota = vistos > 0 && vistos >= ossos.length / 2 ? soma / vistos : 0;
+  return { nota, porOsso };
+}`,
+  },
+];
+
+// Testes de cada missão (a Missão 1 é testada abrindo a câmera de verdade).
+const perto = (a, b) => typeof a === 'number' && Math.abs(a - b) < 0.01;
+const pt = (x, y) => ({ x, y, z: 0, visibility: 1 });
+const TESTES = {
+  2: [
+    ['devolve os pontos da primeira pessoa', (f) => { const p1 = [pt(.1, .1)]; return f.encontrarCorpo({ detectForVideo: () => ({ landmarks: [p1, [pt(.9, .9)]] }) }, {}, 1) === p1; }],
+    ['devolve null quando não tem ninguém', (f) => f.encontrarCorpo({ detectForVideo: () => ({ landmarks: [] }) }, {}, 1) === null],
+    ['passa o vídeo e o tempo para o detector', (f) => { let r; const v = {}; f.encontrarCorpo({ detectForVideo: (a, b) => { r = [a, b]; return { landmarks: [] }; } }, v, 1234); return !!r && r[0] === v && r[1] === 1234; }],
+  ],
+  3: [
+    ['apontando para a direita dá 0°', (f) => perto(f.direcao(pt(.2, .5), pt(.8, .5), 640, 480), 0)],
+    ['apontando para baixo dá 90°', (f) => perto(f.direcao(pt(.5, .2), pt(.5, .8), 640, 480), 90)],
+    ['apontando para cima dá -90°', (f) => perto(f.direcao(pt(.5, .8), pt(.5, .2), 640, 480), -90)],
+    ['apontando para a esquerda dá 180°', (f) => perto(Math.abs(f.direcao(pt(.8, .5), pt(.2, .5), 640, 480)), 180)],
+    ['usa largura e altura (640x480 → 36,87°)', (f) => perto(f.direcao(pt(0, 0), pt(.5, .5), 640, 480), 36.87)],
+  ],
+  4: [
+    ['diferenca(30, 10) = 20', (f) => perto(f.diferenca(30, 10), 20)],
+    ['diferenca(10, 30) = 20 (sem negativo)', (f) => perto(f.diferenca(10, 30), 20)],
+    ['170° e -170° estão a 20°', (f) => perto(f.diferenca(170, -170), 20)],
+    ['10° e 350° estão a 20°', (f) => perto(f.diferenca(10, 350), 20)],
+    ['pose igual tem nota 1', (f) => perto(f.comparar({ bracoE: 30, bracoD: 150 }, { bracoE: 30, bracoD: 150 }, 45)?.nota, 1)],
+    ['metade da tolerância dá 0,5', (f) => perto(f.comparar({ bracoE: 0 }, { bracoE: 20 }, 40)?.nota, 0.5)],
+    ['fora da tolerância dá 0 (nunca negativo)', (f) => perto(f.comparar({ bracoE: 0 }, { bracoE: 90 }, 45)?.nota, 0)],
+    ['a nota é a média dos ossos', (f) => perto(f.comparar({ bracoE: 0, bracoD: 0 }, { bracoE: 0, bracoD: 45 }, 45)?.nota, 0.5)],
+    ['ignora osso que a câmera não viu', (f) => { const r = f.comparar({ bracoE: 1, bracoD: 1, antebracoE: 1 }, { bracoE: 1, bracoD: 1, antebracoE: 1, antebracoD: 1 }, 45); return perto(r?.nota, 1) && r.porOsso.antebracoD === undefined; }],
+    ['vendo menos da metade, nota 0', (f) => perto(f.comparar({ bracoE: 1 }, { bracoE: 1, bracoD: 1, antebracoE: 1, antebracoD: 1 }, 45)?.nota, 0)],
+    ['preenche a nota de cada osso (porOsso)', (f) => { const r = f.comparar({ bracoE: 0, bracoD: 0 }, { bracoE: 0, bracoD: 45 }, 45); return perto(r?.porOsso?.bracoE, 1) && perto(r?.porOsso?.bracoD, 0); }],
+  ],
+};
+
+// impl[n] = funções da missão n que passaram nos testes (o jogo usa estas)
+const impl = {};
+const feita = (n) => !!impl[n];
+
+// Transforma o texto do quadro em funções de verdade.
+function compilar(m, codigo) {
+  const nomes = m.exporta.join(', ');
+  return new Function(`"use strict";\n${codigo}\nreturn { ${nomes} };`)();
+}
+
+// ---------------------------------------------------------------------------------------
+// Peças do jogo
+// ---------------------------------------------------------------------------------------
+const VISIBILIDADE_MIN = 0.5;
+// Os 4 ossos que contam (só os braços). Números = pontos do MediaPipe. E/D = esquerdo/direito da PESSOA.
+const OSSOS = { bracoE: [11, 13], antebracoE: [13, 15], bracoD: [12, 14], antebracoD: [14, 16] };
+const LISTA_OSSOS = Object.keys(OSSOS);
+
+const COR = { perfeito: '#3cff8f', bom: '#ffd319', ruim: '#ff3e6c', neutro: '#ffffff', fantasma: '#2de2e6' };
+const corDaNota = (n) => (n === undefined ? COR.neutro : n >= 0.85 ? COR.perfeito : n >= 0.5 ? COR.bom : COR.ruim);
+const classificar = (n) => (n >= 0.85 ? 'Perfeito' : n >= 0.7 ? 'Ótimo' : n >= 0.5 ? 'Bom' : 'Errou');
+const PONTOS = { Perfeito: 100, 'Ótimo': 70, Bom: 40, Errou: 0 };
+const classeCss = (c) => c.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// Poses prontas, em graus, na imagem ORIGINAL da câmera (sem espelho).
+// O lado esquerdo da pessoa aparece à direita da imagem original: braço esquerdo esticado = 0°, direito = 180°.
+const BIBLIOTECA = [
+  { rotulo: 'Braços em T', assinatura: { bracoE: 0, antebracoE: 0, bracoD: 180, antebracoD: 180 } },
+  { rotulo: 'Braços em Y', assinatura: { bracoE: -55, antebracoE: -55, bracoD: -125, antebracoD: -125 } },
+  { rotulo: 'Tudo pra cima', assinatura: { bracoE: -80, antebracoE: -88, bracoD: -100, antebracoD: -92 } },
+  { rotulo: 'Mãos na cintura', assinatura: { bracoE: 60, antebracoE: 150, bracoD: 120, antebracoD: 30 } },
+  { rotulo: 'Disco!', assinatura: { bracoE: -45, antebracoE: -45, bracoD: 135, antebracoD: 135 } },
+  { rotulo: 'Disco ao contrário', assinatura: { bracoE: 45, antebracoE: 45, bracoD: -135, antebracoD: -135 } },
+  { rotulo: 'Muque', assinatura: { bracoE: 0, antebracoE: -90, bracoD: 180, antebracoD: -90 } },
+  { rotulo: 'L', assinatura: { bracoE: -90, antebracoE: -90, bracoD: 180, antebracoD: 180 } },
+  { rotulo: 'L ao contrário', assinatura: { bracoE: 0, antebracoE: 0, bracoD: -90, antebracoD: -90 } },
+  { rotulo: 'Descansar', assinatura: { bracoE: 80, antebracoE: 85, bracoD: 100, antebracoD: 95 } },
+];
+const pose = (rotulo) => BIBLIOTECA.find((b) => b.rotulo === rotulo).assinatura;
+
+// Coreografias: uma pose a cada N batidas, depois de 8 batidas de introdução.
+function montarDanca(nome, bpm, batidasPorPose, sequencia) {
+  const batida = 60000 / bpm;
+  const intro = batida * 8;
+  const passo = batida * batidasPorPose;
+  return {
+    nome, bpm,
+    duracaoMs: Math.round(intro + sequencia.length * passo + 1500),
+    poses: sequencia.map((rotulo, i) => ({ t: Math.round(intro + i * passo), rotulo, assinatura: pose(rotulo) })),
+  };
+}
+const DANCAS = [
+  montarDanca('Aquecimento (fácil)', 110, 4, ['Braços em T', 'Tudo pra cima', 'Mãos na cintura', 'Braços em T', 'Braços em Y',
+    'Descansar', 'Muque', 'Braços em Y', 'Mãos na cintura', 'Tudo pra cima']),
+  montarDanca('Febre do Disco (médio)', 120, 2, ['Disco!', 'Disco ao contrário', 'Disco!', 'Disco ao contrário', 'Braços em T',
+    'Muque', 'Braços em T', 'Muque', 'L', 'L ao contrário', 'L', 'L ao contrário', 'Braços em Y', 'Mãos na cintura', 'Braços em Y', 'Tudo pra cima']),
+  montarDanca('Turbo (difícil)', 128, 2, ['Braços em Y', 'Muque', 'Disco!', 'L ao contrário', 'Mãos na cintura', 'Braços em T',
+    'Disco ao contrário', 'L', 'Tudo pra cima', 'Muque', 'Disco!', 'Disco ao contrário', 'Braços em Y', 'Mãos na cintura', 'L',
+    'L ao contrário', 'Braços em T', 'Tudo pra cima', 'Muque', 'Descansar']),
+];
+const DIFICULDADES = [
+  { nome: 'Fácil', tolerancia: 60, janelaMs: 500 },
+  { nome: 'Médio', tolerancia: 45, janelaMs: 400 },
+  { nome: 'Difícil', tolerancia: 30, janelaMs: 300 },
+];
+
+// ---------------------------------------------------------------------------------------
+// Visão computacional: modelo e contas
+// ---------------------------------------------------------------------------------------
+async function carregarDetector() {
+  const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm');
+  const criar = (delegate) => PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task',
+      delegate,
+    },
+    runningMode: 'VIDEO',
+    numPoses: 1,
+  });
+  return criar('GPU').catch(() => criar('CPU')); // aparelho sem placa de vídeo boa: usa o processador
+}
+
+// Média móvel: mistura o ponto novo com o anterior para o esqueleto não tremer.
+function suavizar(anterior, atual, suavizacao) {
+  if (!anterior || suavizacao <= 0) return atual;
+  return atual.map((p, i) => ({ ...p, x: (1 - suavizacao) * p.x + suavizacao * anterior[i].x, y: (1 - suavizacao) * p.y + suavizacao * anterior[i].y }));
+}
+
+// A "assinatura" da pose: a direção de cada osso visível (usa a Missão 3).
+function calcularAssinatura(pontos, w, h) {
+  const s = {};
+  for (const osso of LISTA_OSSOS) {
+    const [i, j] = OSSOS[osso];
+    if ((pontos[i].visibility ?? 1) < VISIBILIDADE_MIN || (pontos[j].visibility ?? 1) < VISIBILIDADE_MIN) continue;
+    s[osso] = impl[3].direcao(pontos[i], pontos[j], w, h);
+  }
+  return s;
+}
+
+const quantoLevantado = (graus) => (1 - Math.sin((graus * Math.PI) / 180)) / 2; // 0 = para baixo, 1 = para cima
+
+// ---------------------------------------------------------------------------------------
+// Desenho (tudo espelhado, igual ao vídeo; as contas usam a imagem original)
+// ---------------------------------------------------------------------------------------
+const naTela = (p, w, h) => ({ x: (1 - p.x) * w, y: p.y * h });
+const visivel = (p) => !!p && (p.visibility ?? 1) >= VISIBILIDADE_MIN;
+
+function linha(ctx, a, b, cor, largura) {
+  ctx.strokeStyle = cor; ctx.lineWidth = largura; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+}
+function circulo(ctx, c, r, cor, largura) {
+  ctx.strokeStyle = cor; ctx.lineWidth = largura;
+  ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.stroke();
+}
+
+function desenharEsqueleto(ctx, pontos, w, h, cores = {}, assinatura = null) {
+  const g = Math.max(4, w / 110);
+  const P = (i) => naTela(pontos[i], w, h);
+  const discreto = 'rgba(255,255,255,0.45)';
+  for (const [i, j] of [[11, 12], [11, 23], [12, 24], [23, 24]]) {
+    if (visivel(pontos[i]) && visivel(pontos[j])) linha(ctx, P(i), P(j), discreto, g * 0.6);
+  }
+  if (visivel(pontos[0]) && visivel(pontos[11]) && visivel(pontos[12])) {
+    circulo(ctx, P(0), Math.hypot(P(11).x - P(12).x, P(11).y - P(12).y) * 0.3, discreto, g * 0.6);
+  }
+  for (const osso of LISTA_OSSOS) {
+    const [i, j] = OSSOS[osso];
+    if (!visivel(pontos[i]) || !visivel(pontos[j])) continue;
+    const cor = cores[osso] ?? COR.neutro;
+    ctx.shadowColor = cor; ctx.shadowBlur = g * 2;
+    linha(ctx, P(i), P(j), cor, g);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    for (const k of [i, j]) { ctx.beginPath(); ctx.arc(P(k).x, P(k).y, g * 0.8, 0, Math.PI * 2); ctx.fill(); }
+    if (assinatura && assinatura[osso] !== undefined) {
+      const txt = `${Math.round(assinatura[osso])}°`;
+      const m = { x: (P(i).x + P(j).x) / 2, y: (P(i).y + P(j).y) / 2 };
+      ctx.font = `700 ${Math.max(14, w / 40)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(txt, m.x, m.y);
+      ctx.fillStyle = cor; ctx.fillText(txt, m.x, m.y);
+    }
+  }
+}
+
+// Onde desenhar o "fantasma": nos ombros do jogador (ou no meio da tela se ninguém aparece).
+function ancora(pontos, w, h) {
+  if (pontos && visivel(pontos[11]) && visivel(pontos[12])) {
+    const ombroE = { x: pontos[11].x * w, y: pontos[11].y * h };
+    const ombroD = { x: pontos[12].x * w, y: pontos[12].y * h };
+    return { ombroE, ombroD, escala: Math.max(w * 0.06, Math.hypot(ombroE.x - ombroD.x, ombroE.y - ombroD.y)) };
+  }
+  return ancoraPadrao(w, h, Math.min(w, h) * 0.22, h * 0.32);
+}
+const ancoraPadrao = (w, h, escala, topo) => ({ ombroE: { x: w / 2 + escala / 2, y: topo }, ombroD: { x: w / 2 - escala / 2, y: topo }, escala });
+
+// Desenha um boneco a partir dos ângulos de uma pose.
+function desenharBoneco(ctx, alvo, anc, w, cor, alpha, grossura) {
+  const espelho = (p) => ({ x: w - p.x, y: p.y });
+  const ponta = (de, graus, tamanho) => graus === undefined ? null
+    : { x: de.x + Math.cos((graus * Math.PI) / 180) * tamanho * anc.escala, y: de.y + Math.sin((graus * Math.PI) / 180) * tamanho * anc.escala };
+  const tracar = (a, b, g = grossura) => linha(ctx, espelho(a), espelho(b), cor, g);
+  const { ombroE, ombroD, escala } = anc;
+
+  ctx.save();
+  ctx.globalAlpha = alpha; ctx.shadowColor = cor; ctx.shadowBlur = grossura * 2;
+  const quadrilE = { x: ombroE.x - escala * 0.15, y: ombroE.y + escala * 1.4 };
+  const quadrilD = { x: ombroD.x + escala * 0.15, y: ombroD.y + escala * 1.4 };
+  tracar(ombroE, ombroD, grossura * 0.6); tracar(ombroE, quadrilE, grossura * 0.6);
+  tracar(ombroD, quadrilD, grossura * 0.6); tracar(quadrilE, quadrilD, grossura * 0.6);
+  const pescoco = espelho({ x: (ombroE.x + ombroD.x) / 2, y: (ombroE.y + ombroD.y) / 2 });
+  circulo(ctx, { x: pescoco.x, y: pescoco.y - escala * 0.55 }, escala * 0.3, cor, grossura * 0.6);
+  for (const [ombro, braco, antebraco] of [[ombroE, 'bracoE', 'antebracoE'], [ombroD, 'bracoD', 'antebracoD']]) {
+    const cotovelo = ponta(ombro, alvo[braco], 0.85);
+    if (!cotovelo) continue;
+    tracar(ombro, cotovelo);
+    const pulso = ponta(cotovelo, alvo[antebraco], 0.75);
+    if (pulso) tracar(cotovelo, pulso);
+  }
+  ctx.restore();
+}
+
+function desenharMiniatura(canvas, alvo) {
+  const c = canvas.getContext('2d');
+  const { width: w, height: h } = canvas;
+  c.clearRect(0, 0, w, h);
+  desenharBoneco(c, alvo, ancoraPadrao(w, h, h * 0.26, h * 0.45), w, COR.fantasma, 1, Math.max(3, w / 22));
+}
+
+function novaMiniatura(alvo, tamanho = 64) {
+  const c = document.createElement('canvas');
+  c.width = c.height = tamanho * 2;
+  c.style.width = c.style.height = `${tamanho}px`;
+  c.className = 'mini';
+  desenharMiniatura(c, alvo);
+  return c;
+}
+
+// ---------------------------------------------------------------------------------------
+// Música: batida sintetizada (bumbo, palma, chimbal e baixo). Também é o relógio do jogo.
+// ---------------------------------------------------------------------------------------
+class Batida {
+  constructor(bpm, duracaoMs) { this.bpm = bpm; this.duracaoMs = duracaoMs; this.ctx = null; }
+
+  async iniciar() {
+    this.ctx = new AudioContext();
+    await this.ctx.resume();
+    this.saida = this.ctx.createGain(); this.saida.gain.value = 0.8; this.saida.connect(this.ctx.destination);
+    this.ruido = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.5, this.ctx.sampleRate);
+    const d = this.ruido.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this.inicio = this.ctx.currentTime + 0.15;
+    this.passo = 0;
+    this.timer = setInterval(() => this.agendar(), 50);
+    this.agendar();
+  }
+
+  parar() { clearInterval(this.timer); this.ctx?.close(); this.ctx = null; }
+  agoraMs() { return this.ctx ? (this.ctx.currentTime - this.inicio) * 1000 : -Infinity; }
+
+  agendar() {
+    if (!this.ctx) return;
+    const colcheia = 30 / this.bpm;
+    while (this.inicio + this.passo * colcheia < this.ctx.currentTime + 0.2) {
+      const t = this.inicio + this.passo * colcheia;
+      if ((t - this.inicio) * 1000 > this.duracaoMs) return;
+      const p = this.passo++;
+      const raiz = [110, 87.31, 130.81, 98][Math.floor(p / 8) % 4]; // Lá - Fá - Dó - Sol
+      if (p % 2 === 0) this.bumbo(t); else this.ruidoFiltrado(t, 'highpass', 7000, 0.12, 0.05);
+      if (p % 4 === 2) this.ruidoFiltrado(t, 'bandpass', 1600, 0.45, 0.16);
+      this.baixo(t, p % 2 === 0 ? raiz : raiz * 2, colcheia * 0.9);
+    }
+  }
+
+  bumbo(t) {
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    o.connect(g).connect(this.saida); o.start(t); o.stop(t + 0.3);
+  }
+
+  ruidoFiltrado(t, tipo, freq, ganho, dur) {
+    const s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.ruido; f.type = tipo; f.frequency.value = freq;
+    g.gain.setValueAtTime(ganho, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f).connect(g).connect(this.saida); s.start(t); s.stop(t + dur + 0.02);
+  }
+
+  baixo(t, freq, dur) {
+    const o = this.ctx.createOscillator(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = freq;
+    f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(200, t + dur);
+    g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(f).connect(g).connect(this.saida); o.start(t); o.stop(t + dur + 0.02);
+  }
+}
+
+// ---------------------------------------------------------------------------------------
+// Pontuação: cada pose vale numa janela em volta do seu instante; fica a MELHOR nota da janela.
+// ---------------------------------------------------------------------------------------
+class Placar {
+  constructor(poses, janelaMs) {
+    this.poses = poses; this.janelaMs = janelaMs;
+    this.melhor = poses.map(() => 0); this.fechada = poses.map(() => false);
+    this.pontos = 0; this.combo = 0; this.comboMax = 0;
+    this.contagem = { Perfeito: 0, 'Ótimo': 0, Bom: 0, Errou: 0 };
+  }
+  get multiplicador() { return Math.min(3, 1 + Math.floor(this.combo / 5) * 0.5); }
+
+  avaliar(agora, assin, tolerancia) {
+    const novos = [];
+    this.poses.forEach((p, i) => {
+      if (this.fechada[i]) return;
+      if (assin && Math.abs(agora - p.t) <= this.janelaMs) {
+        this.melhor[i] = Math.max(this.melhor[i], impl[4].comparar(assin, p.assinatura, tolerancia).nota);
+      }
+      if (agora > p.t + this.janelaMs) {
+        this.fechada[i] = true;
+        const classe = classificar(this.melhor[i]);
+        this.combo = classe === 'Errou' ? 0 : this.combo + 1;
+        this.comboMax = Math.max(this.comboMax, this.combo);
+        const pontos = Math.round(PONTOS[classe] * this.multiplicador);
+        this.pontos += pontos;
+        this.contagem[classe]++;
+        novos.push({ classe, pontos });
+      }
+    });
+    return novos;
+  }
+  alvoAtual() { const i = this.fechada.indexOf(false); return i === -1 ? null : i; }
+  terminou() { return this.fechada.every(Boolean); }
+}
+
+// ---------------------------------------------------------------------------------------
+// Estado da página
+// ---------------------------------------------------------------------------------------
+const estado = {
+  modo: 'aula',               // 'aula' | 'jogo'
+  detector: null,
+  carregandoModelo: false,
+  pontos: null,               // pontos da pessoa no frame atual
+  erroMissao2: false,
+  // aula
+  tolerancia: 45, suavizacao: 0.5, mostrarAngulos: false, indiceTreino: 0,
+  // jogo
+  fase: 'menu',               // 'menu' | 'jogando' | 'fim'
+  danca: DANCAS[0], dificuldade: DIFICULDADES[1], placar: null, musica: null, itensFila: [],
+};
+
+const video = $('video');
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+
+function mostrar(id, sim) { $(id).classList.toggle('escondido', !sim); }
+
+function comemorar(texto) {
+  const el = $('comemoracao');
+  el.textContent = texto;
+  el.classList.remove('anima');
+  void el.offsetWidth;
+  el.classList.add('anima');
+}
+
+// O que aparece por cima do vídeo quando falta alguma coisa
+function atualizarAvisoPalco() {
+  const el = $('aviso-palco');
+  let html = '';
+  let erro = false;
+  if (!feita(1)) {
+    html = `<div class="cadeado">🔒</div><strong>Missão 1: ${MISSOES[0].titulo}</strong>
+      <span>Escreva a função <code>abrirCamera</code> na aba <b>Aula</b> e clique em Testar.</span>`;
+  } else if (estado.erroCamera) {
+    html = estado.erroCamera; erro = true;
+  } else if (!estado.detector) {
+    html = estado.erroModelo ?? 'Carregando o modelo de pose…'; erro = !!estado.erroModelo;
+  } else if (!feita(2)) {
+    html = `<div class="cadeado">🔒</div><strong>Missão 2: ${MISSOES[1].titulo}</strong><span>O esqueleto aparece quando ela passar.</span>`;
+  }
+  el.innerHTML = html;
+  el.classList.toggle('erro', erro);
+  mostrar('aviso-palco', !!html);
+}
+
+// ---------------------------------------------------------------------------------------
+// Loop: a cada frame, acha o corpo e desenha o modo atual
+// ---------------------------------------------------------------------------------------
+let ultimoTempoVideo = -1;
+
+function loop() {
+  requestAnimationFrame(loop);
+  if (video.readyState < 2 || !video.videoWidth) return;
+  const w = video.videoWidth, h = video.videoHeight;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+    $('palco').style.aspectRatio = `${w} / ${h}`;
+    $('palco').style.width = `min(100%, calc((100vh - 110px) * ${w / h}))`;
+  }
+
+  if (estado.detector && feita(2) && video.currentTime !== ultimoTempoVideo) {
+    ultimoTempoVideo = video.currentTime;
+    try {
+      const novos = impl[2].encontrarCorpo(estado.detector, video, performance.now());
+      estado.pontos = novos ? suavizar(estado.pontos, novos, estado.suavizacao) : null;
+    } catch (e) {
+      estado.pontos = null;
+      if (!estado.erroMissao2) { estado.erroMissao2 = true; console.error('Erro na Missão 2:', e); }
+    }
+  }
+
+  ctx.clearRect(0, 0, w, h);
+  try {
+    if (estado.modo === 'aula') quadroAula(w, h);
+    else quadroJogo(w, h);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function coresDe(r) {
+  const cores = {};
+  for (const osso in r.porOsso) cores[osso] = corDaNota(r.porOsso[osso]);
+  return cores;
+}
+
+// ----- Aula -----
+function quadroAula(w, h) {
+  const pontos = estado.pontos;
+  const assin = pontos && feita(3) ? calcularAssinatura(pontos, w, h) : null;
+  let cores = {};
+
+  if (feita(4)) {
+    const alvo = BIBLIOTECA[estado.indiceTreino];
+    desenharBoneco(ctx, alvo.assinatura, ancora(pontos, w, h), w, COR.fantasma, 0.35, Math.max(5, w / 90));
+    $('rotulo-pose').textContent = alvo.rotulo;
+    if (assin) {
+      const r = impl[4].comparar(assin, alvo.assinatura, estado.tolerancia);
+      cores = coresDe(r);
+      $('nota-ao-vivo').textContent = `${Math.round(r.nota * 100)}% · ${classificar(r.nota)}`;
+      $('nota-ao-vivo').style.color = corDaNota(r.nota);
+    } else {
+      $('nota-ao-vivo').textContent = '';
+    }
+  }
+
+  if (assin) {
+    for (const [lado, osso] of [['e', 'bracoE'], ['d', 'bracoD']]) {
+      const v = assin[osso] === undefined ? null : quantoLevantado(assin[osso]);
+      $(`barra-${lado}`).style.height = `${(v ?? 0) * 100}%`;
+      $(`valor-${lado}`).textContent = v === null ? '—' : `${Math.round(v * 100)}%`;
+    }
+  }
+  mostrar('medidores', !!assin);
+
+  if (pontos) desenharEsqueleto(ctx, pontos, w, h, cores, estado.mostrarAngulos ? assin : null);
+}
+
+// ----- Jogo -----
+const ANTECEDENCIA_MS = 3000; // quanto antes a pose aparece na fila
+
+function quadroJogo(w, h) {
+  const pontos = estado.pontos;
+  const { placar, musica } = estado;
+  if (estado.fase !== 'jogando') {
+    if (pontos) desenharEsqueleto(ctx, pontos, w, h);
+    return;
+  }
+
+  const agora = musica.agoraMs();
+  const tol = estado.dificuldade.tolerancia;
+  const assin = pontos ? calcularAssinatura(pontos, w, h) : null;
+
+  for (const r of placar.avaliar(agora, assin, tol)) mostrarFeedback(r);
+
+  // fantasma da próxima pose: aparece aos poucos e fica branco na hora de valer
+  let cores = {};
+  const i = placar.alvoAtual();
+  if (i !== null) {
+    const falta = placar.poses[i].t - agora;
+    if (falta < ANTECEDENCIA_MS) {
+      const naHora = Math.abs(falta) <= placar.janelaMs;
+      const alpha = naHora ? 0.75 : 0.15 + 0.45 * (1 - Math.max(0, falta) / ANTECEDENCIA_MS);
+      desenharBoneco(ctx, placar.poses[i].assinatura, ancora(pontos, w, h), w, naHora ? '#ffffff' : COR.fantasma, alpha, Math.max(6, w / 70));
+      if (assin && falta < 1200) cores = coresDe(impl[4].comparar(assin, placar.poses[i].assinatura, tol));
+    }
+  }
+  if (pontos) desenharEsqueleto(ctx, pontos, w, h, cores);
+
+  $('pontos').textContent = placar.pontos.toLocaleString('pt-BR');
+  $('combo').textContent = placar.combo >= 2 ? `combo ${placar.combo}${placar.multiplicador > 1 ? ` ×${String(placar.multiplicador).replace('.', ',')}` : ''}` : '';
+  const faltaPrimeira = placar.poses[0].t - agora;
+  $('contagem').textContent = faltaPrimeira > 3000 ? 'Prepare-se!' : String(Math.ceil(faltaPrimeira / 1000));
+  mostrar('contagem', faltaPrimeira > 0);
+  placar.poses.forEach((p, k) => {
+    const falta = p.t - agora;
+    const item = estado.itensFila[k];
+    const naFila = falta < ANTECEDENCIA_MS + 500 && falta > -placar.janelaMs;
+    item.style.display = naFila ? '' : 'none';
+    if (naFila) item.style.left = `calc(${Math.max(0, falta / ANTECEDENCIA_MS) * 85}% + 4px)`;
+  });
+  mostrar('aviso-sumiu', !pontos);
+
+  if (agora > estado.danca.duracaoMs || (placar.terminou() && agora > placar.poses.at(-1).t + 1500)) terminarJogo();
+}
+
+function mostrarFeedback({ classe, pontos }) {
+  const el = $('feedback');
+  el.className = classeCss(classe);
+  el.innerHTML = `${classe}!${pontos > 0 ? `<small>+${pontos}</small>` : ''}`;
+  void el.offsetWidth;
+  el.classList.add('anima');
+}
+
+async function comecarJogo() {
+  const { danca, dificuldade } = estado;
+  estado.placar = new Placar(danca.poses, dificuldade.janelaMs);
+  estado.musica = new Batida(danca.bpm, danca.duracaoMs);
+  $('fila').querySelectorAll('canvas').forEach((c) => c.remove());
+  estado.itensFila = danca.poses.map((p) => {
+    const c = novaMiniatura(p.assinatura);
+    c.style.display = 'none';
+    $('fila').appendChild(c);
+    return c;
+  });
+  await estado.musica.iniciar();
+  estado.fase = 'jogando';
+  atualizarTela();
+}
+
+function terminarJogo() {
+  estado.musica?.parar();
+  estado.fase = 'fim';
+  atualizarTela();
+}
+
+function sairDoJogo() {
+  estado.musica?.parar();
+  estado.fase = 'menu';
+  atualizarTela();
+}
+
+// ---------------------------------------------------------------------------------------
+// Missões na tela: editor, Testar, Ver resposta
+// ---------------------------------------------------------------------------------------
+const CHAVE = (n) => `jdp:missao:${n}`;
+const cartoes = {};
+
+function montarMissoes() {
+  for (const m of MISSOES) {
+    const el = document.createElement('details');
+    el.className = 'missao';
+    el.innerHTML = `
+      <summary><span class="icone">🔒</span> ${m.n}. ${m.titulo}</summary>
+      <p><b>Conceito:</b> ${m.conceito}</p>
+      <textarea class="editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+      <div class="linha" style="margin-top: 8px">
+        <button class="botao pequeno" data-acao="testar">▶ Testar</button>
+        <button class="botao pequeno secundario" data-acao="resposta">Ver resposta</button>
+        <button class="link" data-acao="limpar">voltar ao início</button>
+      </div>
+      <div class="saida"></div>`;
+    const editor = el.querySelector('.editor');
+    editor.value = localStorage.getItem(CHAVE(m.n)) ?? m.inicial;
+    editor.rows = Math.min(24, editor.value.split('\n').length + 2);
+    editor.addEventListener('input', () => localStorage.setItem(CHAVE(m.n), editor.value));
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') { // Tab vira 2 espaços em vez de sair do quadro
+        e.preventDefault();
+        editor.setRangeText('  ', editor.selectionStart, editor.selectionEnd, 'end');
+        editor.dispatchEvent(new Event('input'));
+      }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); testarMissao(m); }
+    });
+    el.addEventListener('click', (e) => {
+      const acao = e.target.closest('button')?.dataset.acao;
+      if (acao === 'testar') testarMissao(m);
+      if (acao === 'resposta') { editor.value = m.resposta; editor.dispatchEvent(new Event('input')); testarMissao(m); }
+      if (acao === 'limpar') { editor.value = m.inicial; editor.dispatchEvent(new Event('input')); }
+    });
+    $('lista-missoes').appendChild(el);
+    cartoes[m.n] = { el, editor, saida: el.querySelector('.saida') };
+  }
+}
+
+function escapar(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+}
+
+async function testarMissao(m, silencioso = false) {
+  const { saida } = cartoes[m.n];
+  const jaEstavaFeita = feita(m.n);
+  let funcoes;
+  try {
+    funcoes = compilar(m, cartoes[m.n].editor.value);
+  } catch (e) {
+    saida.innerHTML = `<div class="erro">Erro no código: ${escapar(e.message)}</div>`;
+    if (m.n > 1) delete impl[m.n];
+    return atualizarTela();
+  }
+
+  // Missão 1: testa abrindo a câmera de verdade
+  if (m.n === 1) {
+    if (jaEstavaFeita) { saida.innerHTML = '<div class="ok">✔ A câmera já está funcionando.</div>'; return; }
+    saida.innerHTML = 'Abrindo a câmera…';
+    try {
+      await funcoes.abrirCamera(video);
+      if (!(video.srcObject instanceof MediaStream) || video.paused) throw new Error('o vídeo não começou a tocar (faltou video.srcObject = stream ou await video.play()?)');
+      impl[1] = funcoes;
+      estado.erroCamera = null;
+      saida.innerHTML = '<ul><li class="ok">✔ a câmera abriu e o vídeo está tocando</li></ul>';
+      if (!silencioso) { comemorar(`🎉 Missão 1 completa: ${m.destrava}`); abrirProxima(1); }
+      ligarModelo();
+    } catch (e) {
+      const motivo = e.name === 'NotAllowedError' ? 'permissão da câmera negada (clique no cadeado ao lado do endereço e libere)'
+        : e.name === 'NotReadableError' ? 'a câmera está sendo usada por outro programa (Meet, Zoom, outra aba?)'
+        : e.message;
+      saida.innerHTML = `<div class="erro">✘ ${escapar(motivo)}</div>`;
+    }
+    return atualizarTela();
+  }
+
+  // Missões 2 a 4: roda os testes
+  const linhas = [];
+  let passou = true;
+  for (const [nome, fn] of TESTES[m.n]) {
+    let ok = false, erro = '';
+    try { ok = fn(funcoes) === true; } catch (e) { erro = e.message; }
+    if (!ok) passou = false;
+    linhas.push(`<li class="${ok ? 'ok' : 'falhou'}">${ok ? '✔' : '✘'} ${nome}${erro ? ` — <em>${escapar(erro)}</em>` : ''}</li>`);
+  }
+  saida.innerHTML = `<ul>${linhas.join('')}</ul>`;
+  if (passou) {
+    impl[m.n] = funcoes;
+    if (m.n === 2) estado.erroMissao2 = false;
+    if (!jaEstavaFeita && !silencioso) {
+      comemorar(`🎉 Missão ${m.n} completa: ${m.destrava}`);
+      abrirProxima(m.n);
+    }
+  } else {
+    delete impl[m.n];
+  }
+  atualizarTela();
+}
+
+// fecha a missão concluída e abre a próxima que falta
+function abrirProxima(n) {
+  cartoes[n].el.open = false;
+  const proxima = MISSOES.find((m) => !feita(m.n));
+  if (proxima) {
+    cartoes[proxima.n].el.open = true;
+    cartoes[proxima.n].el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function ligarModelo() {
+  if (estado.detector || estado.carregandoModelo) return;
+  estado.carregandoModelo = true;
+  atualizarAvisoPalco();
+  try {
+    estado.detector = await carregarDetector();
+    estado.erroModelo = null;
+  } catch (e) {
+    estado.erroModelo = `Não consegui carregar o modelo de pose (precisa de internet).<br><small>${escapar(e.message)}</small>`;
+  }
+  estado.carregandoModelo = false;
+  atualizarTela();
+}
+
+// ---------------------------------------------------------------------------------------
+// Painéis e tela
+// ---------------------------------------------------------------------------------------
+function painelJogo() {
+  const el = $('painel-jogo');
+  const faltando = [1, 2, 3, 4].filter((n) => !feita(n));
+
+  if (faltando.length) {
+    el.innerHTML = `<h2>🔒 O jogo ainda está trancado</h2>
+      <p>Faltam as missões ${faltando.join(', ')} na aba <b>Aula</b>.</p>
+      <button class="botao" data-ir="aula">Ir para a Aula</button>
+      <button class="link" data-acao="liberar">liberar tudo com as respostas prontas</button>`;
+    return;
+  }
+
+  if (estado.fase === 'fim') {
+    const p = estado.placar;
+    const acertos = (p.contagem.Perfeito + p.contagem['Ótimo']) / p.poses.length;
+    const titulo = acertos > 0.8 ? 'Lenda da pista!' : acertos > 0.5 ? 'Mandou bem!' : acertos > 0.25 ? 'Tá pegando o jeito' : 'O importante é se divertir 😅';
+    el.innerHTML = `<h2>${titulo}</h2>
+      <div class="placar-final">${p.pontos.toLocaleString('pt-BR')} pontos</div>
+      <div class="classes">
+        ${Object.entries(p.contagem).map(([c, n]) => `<div class="${classeCss(c)}"><b>${n}</b><span>${c}</span></div>`).join('')}
+        <div><b>${p.comboMax}</b><span>maior combo</span></div>
+      </div>
+      <button class="botao grande" data-acao="comecar">Jogar de novo</button>
+      <button class="botao secundario" data-acao="menu">Trocar a dança</button>`;
+    return;
+  }
+
+  el.innerHTML = `<h2>Escolha a dança</h2><div id="lista-dancas" style="display: flex; flex-direction: column; gap: 8px"></div>
+    <div class="linha">${DIFICULDADES.map((d, i) =>
+      `<button class="botao pequeno ${d === estado.dificuldade ? '' : 'secundario'}" data-dificuldade="${i}">${d.nome}</button>`).join('')}</div>
+    <button class="botao grande" data-acao="comecar" ${estado.detector ? '' : 'disabled'}>${estado.detector ? 'Começar!' : 'Esperando o modelo…'}</button>
+    <p class="nota">Afaste-se até a câmera ver você da cintura para cima.</p>`;
+  DANCAS.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.className = `opcao ${d === estado.danca ? 'ativa' : ''}`;
+    b.dataset.danca = i;
+    b.append(novaMiniatura(d.poses[0].assinatura, 44));
+    b.insertAdjacentHTML('beforeend', `<span><b>${d.nome}</b><small>${d.poses.length} poses · ${Math.round(d.duracaoMs / 1000)} s</small></span>`);
+    $('lista-dancas').appendChild(b);
+  });
+}
+
+function atualizarMissoes() {
+  let abriuUma = false;
+  for (const m of MISSOES) {
+    const { el } = cartoes[m.n];
+    el.classList.toggle('ok', feita(m.n));
+    el.querySelector('.icone').textContent = feita(m.n) ? '✅' : '🔒';
+    // deixa aberta a primeira missão que falta (sem fechar as que a pessoa abriu)
+    if (!feita(m.n) && !abriuUma) { abriuUma = true; if (!el.dataset.mexeu) el.open = true; }
+  }
+  mostrar('ajustes', feita(4));
+  desenharMiniatura($('mini-treino'), BIBLIOTECA[estado.indiceTreino].assinatura);
+}
+
+function atualizarTela() {
+  const jogando = estado.modo === 'jogo' && estado.fase === 'jogando';
+  document.querySelectorAll('.abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.modo === estado.modo));
+  $('main').classList.toggle('tela-cheia', jogando);
+  $('main').classList.toggle('modo-aula', estado.modo === 'aula');
+  mostrar('painel-jogo', estado.modo === 'jogo' && !jogando);
+  mostrar('painel-aula', estado.modo === 'aula');
+  for (const id of ['hud-jogo', 'fila', 'btn-sair']) mostrar(id, jogando);
+  if (!jogando) for (const id of ['contagem', 'aviso-sumiu']) mostrar(id, false);
+  mostrar('hud-aula', estado.modo === 'aula' && feita(4));
+  if (estado.modo !== 'aula') mostrar('medidores', false);
+  $('progresso').textContent = `Missões: ${MISSOES.filter((m) => feita(m.n)).length} de ${MISSOES.length}`;
+  atualizarAvisoPalco();
+  atualizarMissoes();
+  if (estado.modo === 'jogo') painelJogo();
+}
+
+// ---------------------------------------------------------------------------------------
+// Botões e teclas
+// ---------------------------------------------------------------------------------------
+function trocarModo(modo) {
+  if (estado.fase === 'jogando') sairDoJogo();
+  estado.modo = modo;
+  atualizarTela();
+}
+
+document.querySelectorAll('.abas button').forEach((b) => b.addEventListener('click', () => trocarModo(b.dataset.modo)));
+
+$('painel-jogo').addEventListener('click', async (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.ir) return trocarModo(b.dataset.ir);
+  if (b.dataset.acao === 'liberar') {
+    for (const m of MISSOES) {
+      if (feita(m.n)) continue;
+      cartoes[m.n].editor.value = m.resposta;
+      cartoes[m.n].editor.dispatchEvent(new Event('input'));
+      await testarMissao(m, true);
+    }
+    return;
+  }
+  if (b.dataset.danca) estado.danca = DANCAS[b.dataset.danca];
+  if (b.dataset.dificuldade) estado.dificuldade = DIFICULDADES[b.dataset.dificuldade];
+  if (b.dataset.acao === 'comecar') return void comecarJogo();
+  if (b.dataset.acao === 'menu') estado.fase = 'menu';
+  atualizarTela();
+});
+
+$('btn-sair').addEventListener('click', sairDoJogo);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && estado.fase === 'jogando') sairDoJogo(); });
+
+const trocarTreino = (passo) => {
+  estado.indiceTreino = (estado.indiceTreino + passo + BIBLIOTECA.length) % BIBLIOTECA.length;
+  desenharMiniatura($('mini-treino'), BIBLIOTECA[estado.indiceTreino].assinatura);
+};
+$('pose-anterior').addEventListener('click', () => trocarTreino(-1));
+$('pose-proxima').addEventListener('click', () => trocarTreino(1));
+$('tolerancia').addEventListener('input', (e) => { estado.tolerancia = Number(e.target.value); $('txt-tolerancia').textContent = `${e.target.value}°`; });
+$('suavizacao').addEventListener('input', (e) => { estado.suavizacao = Number(e.target.value); $('txt-suavizacao').textContent = e.target.value.replace('.', ','); });
+$('mostrar-angulos').addEventListener('change', (e) => { estado.mostrarAngulos = e.target.checked; });
+
+$('btn-recomecar').addEventListener('click', () => {
+  if (!confirm('Apagar o código de todas as missões e começar do zero?')) return;
+  MISSOES.forEach((m) => localStorage.removeItem(CHAVE(m.n)));
+  location.reload();
+});
+
+$('btn-qr').addEventListener('click', () => {
+  const link = location.href.split('#')[0];
+  $('img-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=10&data=${encodeURIComponent(link)}`;
+  $('txt-link').textContent = link;
+  mostrar('modal-qr', true);
+});
+$('fechar-qr').addEventListener('click', () => mostrar('modal-qr', false));
+$('modal-qr').addEventListener('click', (e) => { if (e.target.id === 'modal-qr') mostrar('modal-qr', false); });
+
+// ---------------------------------------------------------------------------------------
+// Começo: monta as missões, retesta o que já tinha sido escrito e liga o loop
+// ---------------------------------------------------------------------------------------
+async function iniciar() {
+  montarMissoes();
+  document.querySelectorAll('details.missao summary').forEach((s) => s.addEventListener('click', () => { s.parentElement.dataset.mexeu = '1'; }));
+  atualizarTela();
+  // quem recarregou a página não perde o que já fez
+  for (const m of MISSOES) {
+    if (cartoes[m.n].editor.value !== m.inicial) await testarMissao(m, true);
+  }
+  atualizarTela();
+  requestAnimationFrame(loop);
+}
+
+iniciar();
+</script>
+</body>
+</html>
