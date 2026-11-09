@@ -7,6 +7,8 @@ Jogo de dança na webcam para ensinar **visão computacional**. Duas partes, na 
 
 Tudo é configurado no painel **`/admin`** (Laravel + Filament): missões, danças, músicas, poses, dificuldades, pontuação e a competição. Nada fica escrito no código.
 
+**No ar em [ecluiza.mgpsistemas.com.br](https://ecluiza.mgpsistemas.com.br/)** (painel em `/admin`, ranking em `/ranking`).
+
 ## O que tem em cada endereço
 
 | Endereço | Para quê |
@@ -35,8 +37,8 @@ Confira com `php -m` (as seis têm que aparecer). Depois, no PowerShell:
 
 ```powershell
 cd C:\projetos
-composer create-project laravel/laravel rebola-ai
-cd rebola-ai
+composer create-project laravel/laravel just-dance
+cd just-dance
 composer require filament/filament
 php artisan filament:install --panels      # Enter para aceitar o painel "admin"
 ```
@@ -59,7 +61,7 @@ No `bootstrap/app.php`, dentro de `->withMiddleware(function (Middleware $middle
 $middleware->trustProxies(at: '*');
 ```
 
-(sem isso o painel abre sem estilo quando acessado pelo link da Cloudflare). Por fim:
+(sem isso o painel abre sem estilo quando o site fica atrás de um proxy com https, como no servidor ou no túnel da Cloudflare). Por fim:
 
 ```powershell
 php artisan migrate --seed
@@ -74,8 +76,8 @@ php artisan serve
 <summary>Linux / Mac / Git Bash: script que faz tudo isso</summary>
 
 ```bash
-bash instalar.sh rebola-ai
-cd rebola-ai
+bash instalar.sh just-dance
+cd just-dance
 php artisan serve
 ```
 
@@ -156,7 +158,7 @@ O servidor recusa pontuação acima do máximo possível da dança (todas as pos
 
 - O vídeo fica grudado no topo (no máximo uns 46% da tela) e as missões rolam embaixo dele.
 - A câmera abre com o menor zoom que o aparelho permitir. No botão **📷**, no canto do vídeo, dá para trocar de câmera e mexer no zoom. Em muitos celulares a traseira **ultra-angular** é o "0,5×". Depende do aparelho e do navegador: a câmera frontal quase nunca tem 0,5× pelo navegador. Se só aparecer uma câmera sem zoom, afaste o celular.
-- A câmera só funciona em **https** (ou em `localhost`). Por isso, no celular, use sempre o link da Cloudflare.
+- A câmera só funciona em **https** (ou em `localhost`). Por isso, no celular, use sempre `https://ecluiza.mgpsistemas.com.br`.
 
 ## Música
 
@@ -165,27 +167,24 @@ O servidor recusa pontuação acima do máximo possível da dança (todas as pos
 - Sem competição, o menu do jogo oferece: **Batida do jogo** (sintetizada no navegador, no BPM da dança), as **músicas cadastradas** e **Arquivo do meu computador** (informando o BPM).
 - Upload: até 12 MB por arquivo (limite padrão do Livewire). Para aumentar: `php artisan livewire:publish --config`, mude `temporary_file_upload.rules` e ajuste `upload_max_filesize` e `post_max_size` no `php.ini`.
 
-## Abrir para a sala (Cloudflare Tunnel)
+## Roteiro do dia
 
-Com `php artisan serve` rodando, em outro terminal:
+O site está publicado, então não precisa ligar nada no notebook.
+
+1. **Antes:** abra `https://ecluiza.mgpsistemas.com.br/admin`, confira a dança, a dificuldade e a música da competição (Ajustes → Configurações) e clique em **Zerar ranking** (Jogo → Ranking).
+2. Notebook no telão: abra `https://ecluiza.mgpsistemas.com.br/` para dar a aula. O botão **📱 Link para a sala** mostra o QR code das missões.
+3. Na hora da competição: abra `https://ecluiza.mgpsistemas.com.br/ranking` em tela cheia (F11). O QR code dele também abre nas missões; a pessoa vai na aba **Jogar** para dançar.
+4. **Plano B**, se o servidor ou a internet falharem: o GitHub Pages (abaixo).
+
+## Mostrar uma cópia do notebook para a sala (opcional)
+
+Só é preciso para mostrar uma versão rodando no notebook, fora do servidor. Com `php artisan serve` rodando, em outro terminal:
 
 ```powershell
 cloudflared tunnel --url http://localhost:8000
 ```
 
-No meio do texto que aparece, procure a caixa **"Your quick Tunnel has been created!"**: o link `https://….trycloudflare.com` está logo abaixo. Para achar só o link: `cloudflared tunnel --url http://localhost:8000 2>&1 | Select-String "trycloudflare.com"`.
-
-- O link muda toda vez que o túnel é aberto e só funciona com o notebook ligado.
-- Uma mensagem de erro sobre "DNS local resolver" no começo é normal.
-
-## Roteiro do dia
-
-1. **Antes:** confira que a dança, a dificuldade e a música da competição estão certas (Configurações) e clique em **Zerar ranking** (Jogo → Ranking).
-2. Terminal 1: `cd C:\projetos\rebola-ai` e `php artisan serve`.
-3. Terminal 2: `cloudflared tunnel --url http://localhost:8000` e copie o link.
-4. Notebook no telão: abra `https://<link>/` para dar a aula (botão **📱 Link para a sala** mostra o QR code das missões).
-5. Na hora da competição: abra `https://<link>/ranking` em tela cheia (F11). O QR code dele também abre nas missões; a pessoa vai na aba **Jogar** para dançar.
-6. **Plano B** sem internet ou sem notebook: o GitHub Pages (abaixo).
+No meio do texto que aparece, procure a caixa **"Your quick Tunnel has been created!"**: o link `https://….trycloudflare.com` está logo abaixo. Ele muda toda vez que o túnel é aberto e só funciona com o notebook ligado. Uma mensagem de erro sobre "DNS local resolver" no começo é normal.
 
 ## Versão sem servidor (GitHub Pages)
 
@@ -202,15 +201,16 @@ O `index.html` que acompanha o pacote é o mesmo jogo, gerado a partir do `resou
 | "A permissão da câmera foi negada" | Clique no cadeado ao lado do endereço → Câmera → Permitir. No Windows: Configurações → Privacidade → Câmera → "Permitir que aplicativos da área de trabalho acessem". Depois clique em **Tentar de novo** |
 | "A câmera está sendo usada por outro programa" | Feche Meet, Zoom, Teams ou outra aba usando a câmera |
 | "Não consegui carregar o modelo de pose" | O modelo vem da internet (Google/jsDelivr). Confira a conexão e recarregue |
-| Painel sem estilo pelo link da Cloudflare | Falta `$middleware->trustProxies(at: '*');` no `bootstrap/app.php` |
-| Celular não abre a câmera | O endereço precisa ser `https` (use o link da Cloudflare, não o IP do notebook) |
+| Painel sem estilo no domínio (ou pelo link da Cloudflare) | Falta `$middleware->trustProxies(at: '*');` no `bootstrap/app.php` |
+| Celular não abre a câmera | O endereço precisa ser `https`: use `https://ecluiza.mgpsistemas.com.br`, não o IP do notebook |
 | "Ranking desligado" no telão | Escolha a dança da competição em Configurações |
-| "Não consegui salvar no ranking" | O servidor ou o túnel caiu. Volte com eles e toque em **Tentar de novo** (a pontuação ainda está na tela) |
-| Jogo lento com muita gente no celular | O `php artisan serve` no Windows atende um pedido por vez. Para muitos aparelhos ao mesmo tempo, sirva pelo Apache do XAMPP apontando para a pasta `public` |
+| "Não consegui salvar no ranking" | O servidor ou a internet caiu. Quando voltar, toque em **Tentar de novo** (a pontuação ainda está na tela) |
+| Jogo lento com muita gente, rodando no notebook | O `php artisan serve` no Windows atende um pedido por vez. Use o site publicado, ou sirva pelo Apache do XAMPP apontando para a pasta `public` |
 | Missão de bordas não chega no alvo | Câmera com muito ruído: aumente o máximo de bordas da missão no painel |
 
 ## Publicar numa VPS
 
+- É assim que o Rebola Ai está publicado em `ecluiza.mgpsistemas.com.br`.
 - O servidor precisa de **HTTPS**, senão o celular não libera a câmera.
 - É um Laravel comum: PHP-FPM + Nginx ou Caddy apontando para `public/`.
 - Depois de copiar o projeto: `composer install --no-dev`, `php artisan migrate --force`, `php artisan storage:link`, `php artisan optimize`.
